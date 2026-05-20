@@ -103,6 +103,7 @@ CASES: list[dict] = [
             "days_supply": 10,
             "refills": 0,
             "daw": 0,
+            "sig_english": "Take 1 capsule by mouth three times daily for 10 days",
             "sig_components": {
                 "verb": VERB_TAKE,
                 "quantity": ["1", "one"],
@@ -150,6 +151,7 @@ CASES: list[dict] = [
             "days_supply": 30,
             "refills": 5,
             "daw": 0,
+            "sig_english": "Take 1 tablet by mouth once daily",
             "sig_components": {
                 "verb": VERB_TAKE,
                 "quantity": ["1", "one"],
@@ -195,6 +197,7 @@ CASES: list[dict] = [
             "days_supply": 30,
             "refills": 5,
             "daw": 0,
+            "sig_english": "Take 1 tablet by mouth twice daily",
             "sig_components": {
                 "verb": VERB_TAKE,
                 "quantity": ["1", "one"],
@@ -240,6 +243,7 @@ CASES: list[dict] = [
             "days_supply": 30,
             "refills": 11,
             "daw": 0,
+            "sig_english": "Take 1 tablet by mouth at bedtime",
             "sig_components": {
                 "verb": VERB_TAKE,
                 "quantity": ["1", "one"],
@@ -285,6 +289,7 @@ CASES: list[dict] = [
             "days_supply": 7,
             "refills": 0,
             "daw": 0,
+            "sig_english": "Take 1 tablet by mouth twice daily for 7 days",
             "sig_components": {
                 "verb": VERB_TAKE,
                 "quantity": ["1", "one"],
@@ -332,6 +337,7 @@ CASES: list[dict] = [
             "days_supply": 90,
             "refills": 3,
             "daw": 1,
+            "sig_english": "Take 1 tablet by mouth once daily",
             "sig_components": {
                 "verb": VERB_TAKE,
                 "quantity": ["1", "one"],
