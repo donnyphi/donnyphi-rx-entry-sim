@@ -10,13 +10,32 @@ Run with:
 from __future__ import annotations
 
 import html
+import re
 from datetime import date
+from io import BytesIO
 
 import streamlit as st
 
 import cases
 import checker
 import tracker
+
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.platypus import (
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 
 FIELD_LABELS = {
@@ -787,25 +806,30 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     margin-bottom: 8px;
 }
 
-.sig-decoder-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 4px 22px;
+.sig-decoder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .sig-pair {
     display: flex;
     align-items: baseline;
-    gap: 10px;
-    font-size: 0.85rem;
-    padding: 2px 0;
+    gap: 6px;
+    font-size: 0.86rem;
+    padding: 3px 0;
 }
 
 .sig-abbr {
     font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
     font-weight: 700;
     color: #0f766e;
-    min-width: 36px;
+    min-width: 80px;
+}
+
+.sig-eq {
+    color: #9ca3af;
+    font-weight: 400;
 }
 
 .sig-meaning {
@@ -998,6 +1022,289 @@ def _strip_label(text: str) -> str:
 
 
 # =====================================================================
+# SIG decoder: parse a shorthand SIG into (token, meaning) pairs
+# =====================================================================
+
+# Ordered list of (compiled_regex, meaning_function). Earlier patterns
+# take precedence on overlap, so put longer / more specific patterns first.
+SIG_DECODE_PATTERNS: list[tuple[re.Pattern, callable]] = [
+    # Quantity + dosage form
+    (re.compile(r'\b(\d+(?:\.\d+)?)\s+tab(?:s|let|lets)?\b', re.IGNORECASE),
+     lambda m: f"{m.group(1)} tablet{'s' if float(m.group(1)) != 1 else ''}"),
+    (re.compile(r'\b(\d+(?:\.\d+)?)\s+cap(?:s|sule|sules)?\b', re.IGNORECASE),
+     lambda m: f"{m.group(1)} capsule{'s' if float(m.group(1)) != 1 else ''}"),
+    (re.compile(r'\b(\d+(?:\.\d+)?)\s+gtt(?:s)?\b', re.IGNORECASE),
+     lambda m: f"{m.group(1)} drop{'s' if float(m.group(1)) != 1 else ''}"),
+    (re.compile(r'\b(\d+(?:\.\d+)?)\s+puff(?:s)?\b', re.IGNORECASE),
+     lambda m: f"{m.group(1)} puff{'s' if float(m.group(1)) != 1 else ''}"),
+    (re.compile(r'\b(\d+(?:\.\d+)?)\s+m[lL]\b'),
+     lambda m: f"{m.group(1)} milliliters"),
+    # Routes
+    (re.compile(r'\bPO\b'), lambda m: "by mouth"),
+    (re.compile(r'\bSL\b'), lambda m: "under the tongue"),
+    (re.compile(r'\bIV\b'), lambda m: "intravenous"),
+    (re.compile(r'\bIM\b'), lambda m: "intramuscular"),
+    (re.compile(r'\bINH\b'), lambda m: "inhaled"),
+    (re.compile(r'\bOU\b'), lambda m: "in both eyes"),
+    (re.compile(r'\bOD\b'), lambda m: "in the right eye"),
+    (re.compile(r'\bOS\b'), lambda m: "in the left eye"),
+    (re.compile(r'\bAU\b'), lambda m: "in both ears"),
+    (re.compile(r'\bAD\b'), lambda m: "in the right ear"),
+    (re.compile(r'\bAS\b'), lambda m: "in the left ear"),
+    (re.compile(r'\bTOP\b'), lambda m: "topically"),
+    # Frequencies - more specific patterns first
+    (re.compile(r'\bQ\s*(\d+)\s*H\b', re.IGNORECASE),
+     lambda m: f"every {m.group(1)} hours"),
+    (re.compile(r'\bQAM\b'), lambda m: "every morning"),
+    (re.compile(r'\bQPM\b'), lambda m: "every evening"),
+    (re.compile(r'\bQHS\b'), lambda m: "at bedtime"),
+    (re.compile(r'\bQID\b'), lambda m: "four times daily"),
+    (re.compile(r'\bTID\b'), lambda m: "three times daily"),
+    (re.compile(r'\bBID\b'), lambda m: "twice daily"),
+    (re.compile(r'\bQD\b'), lambda m: "once daily"),
+    (re.compile(r'\bPRN\b'), lambda m: "as needed"),
+    # Duration
+    (re.compile(r'x\s+(\d+)\s+days?\b', re.IGNORECASE),
+     lambda m: f"for {m.group(1)} day{'s' if int(m.group(1)) != 1 else ''}"),
+    (re.compile(r'x\s+(\d+)\s+weeks?\b', re.IGNORECASE),
+     lambda m: f"for {m.group(1)} week{'s' if int(m.group(1)) != 1 else ''}"),
+]
+
+
+def decode_sig(sig_shorthand: str) -> list[tuple[str, str]]:
+    """Return [(matched_token, plain_english_meaning), ...] in order of appearance.
+
+    Earlier patterns in SIG_DECODE_PATTERNS take precedence on overlapping
+    matches, so a 'Q6H' is decoded once, not also as 'QID' / 'QD' etc.
+    """
+    matches: list[tuple[int, str, str]] = []
+    used_spans: list[tuple[int, int]] = []
+    for pattern, meaning_fn in SIG_DECODE_PATTERNS:
+        for match in pattern.finditer(sig_shorthand):
+            start, end = match.span()
+            if any(s < end and start < e for s, e in used_spans):
+                continue
+            matches.append((start, match.group(0), meaning_fn(match)))
+            used_spans.append((start, end))
+    matches.sort(key=lambda mt: mt[0])
+    return [(token, meaning) for _, token, meaning in matches]
+
+
+# =====================================================================
+# PDF builder using reportlab
+# =====================================================================
+
+def build_label_pdf(case: dict, feedback: dict) -> bytes:
+    """Build a one-page training label PDF using reportlab.
+
+    Uses the same field-resolution as the on-screen label: user's value
+    if correct, expected value with '*' marker if wrong. Disclaimer is
+    placed both at the top and bottom of the page.
+    """
+    expected = case["expected"]
+    patient = case["patient"]
+    prescriber = case["prescriber"]
+
+    corrected_fields: list[str] = []
+
+    def resolve(field_key: str, corrected_value):
+        res = feedback.get(field_key, {})
+        if res.get("correct"):
+            return str(res["user"]), False
+        corrected_fields.append(field_key)
+        return str(corrected_value), True
+
+    drug_val, drug_corr = resolve("drug_name", expected["drug_name"])
+    strength_val, strength_corr = resolve("strength", expected["strength"])
+    sig_val, sig_corr = resolve("sig", expected.get("sig_english", ""))
+    qty_val, qty_corr = resolve("quantity", expected["quantity"])
+    days_val, days_corr = resolve("days_supply", expected["days_supply"])
+    refills_val, refills_corr = resolve("refills", expected["refills"])
+
+    def mark(corrected: bool) -> str:
+        return " *" if corrected else ""
+
+    digits = "".join(c for c in case["case_id"] if c.isdigit()) or "0"
+    rx_num = f"Rx# {int(digits):07d}"
+    fill_date = date.today().strftime("%m/%d/%Y")
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=1 * inch,
+        rightMargin=1 * inch,
+        topMargin=0.75 * inch,
+        bottomMargin=0.75 * inch,
+        title="Training Label",
+        author="Rx Entry Simulator",
+    )
+
+    # Paragraph styles
+    pharm_style = ParagraphStyle(
+        "pharm", fontName="Helvetica-Bold", fontSize=12,
+        textColor=colors.black, alignment=0,
+    )
+    rx_num_style = ParagraphStyle(
+        "rxnum", fontName="Courier", fontSize=10,
+        textColor=colors.black, alignment=2,
+    )
+    address_style = ParagraphStyle(
+        "addr", fontName="Helvetica", fontSize=9,
+        textColor=colors.HexColor("#4b5563"),
+    )
+    patient_style = ParagraphStyle(
+        "patient", fontName="Helvetica-Bold", fontSize=12,
+        textColor=colors.black,
+    )
+    fill_date_style = ParagraphStyle(
+        "filldate", fontName="Helvetica", fontSize=9,
+        textColor=colors.HexColor("#4b5563"), alignment=2,
+    )
+    drug_style = ParagraphStyle(
+        "drug", fontName="Helvetica-Bold", fontSize=14,
+        textColor=colors.black,
+    )
+    sig_style = ParagraphStyle(
+        "sig", fontName="Helvetica", fontSize=13,
+        textColor=colors.black, leading=18,
+    )
+    fill_field_style = ParagraphStyle(
+        "fill", fontName="Helvetica", fontSize=11,
+        textColor=colors.black, alignment=1,
+    )
+    presc_style = ParagraphStyle(
+        "presc", fontName="Helvetica", fontSize=11,
+        textColor=colors.black,
+    )
+    footer_style = ParagraphStyle(
+        "footer", fontName="Helvetica-Bold", fontSize=10,
+        textColor=colors.black, alignment=1,
+    )
+    warning_style = ParagraphStyle(
+        "warn", fontName="Helvetica", fontSize=10,
+        textColor=colors.HexColor("#92400e"), alignment=1,
+        backColor=colors.HexColor("#fef3c7"),
+        borderPadding=8,
+        borderColor=colors.HexColor("#f59e0b"),
+        borderWidth=0.5,
+    )
+
+    story: list = []
+
+    # Top disclaimer
+    story.append(Paragraph("TRAINING ONLY \u2014 NOT FOR DISPENSING", footer_style))
+    story.append(Spacer(1, 12))
+
+    # Corrections banner if any
+    if corrected_fields:
+        n = len(corrected_fields)
+        plural = "s" if n != 1 else ""
+        story.append(Paragraph(
+            f"{n} field{plural} shown corrected (marked *) \u2014 "
+            "training preview only \u2014 not for dispensing",
+            warning_style,
+        ))
+        story.append(Spacer(1, 14))
+
+    # Pharmacy header row
+    pharmacy_table = Table(
+        [[Paragraph("TRAINING PHARMACY", pharm_style),
+          Paragraph(rx_num, rx_num_style)]],
+        colWidths=[4 * inch, 2.5 * inch],
+    )
+    pharmacy_table.setStyle(TableStyle([
+        ("LINEBELOW", (0, 0), (-1, -1), 1.5, colors.black),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(pharmacy_table)
+
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(
+        "123 Sample Street \u00b7 Sample City, TX 78000 \u00b7 (555) 000-0000",
+        address_style,
+    ))
+    story.append(HRFlowable(
+        width="100%", thickness=0.5, color=colors.HexColor("#cbd5e1"),
+        spaceBefore=8, spaceAfter=10, dash=(2, 2),
+    ))
+
+    # Patient + fill date row
+    patient_table = Table(
+        [[Paragraph(patient["name"].upper(), patient_style),
+          Paragraph(f"Filled: {fill_date}", fill_date_style)]],
+        colWidths=[4 * inch, 2.5 * inch],
+    )
+    patient_table.setStyle(TableStyle([
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(patient_table)
+
+    story.append(Spacer(1, 14))
+
+    # Drug line
+    drug_text = (
+        f"{drug_val.upper()}{mark(drug_corr)} "
+        f"{strength_val.upper()}{mark(strength_corr)}"
+    )
+    story.append(Paragraph(drug_text, drug_style))
+
+    story.append(HRFlowable(
+        width="100%", thickness=0.5, color=colors.HexColor("#cbd5e1"),
+        spaceBefore=12, spaceAfter=12, dash=(2, 2),
+    ))
+
+    # SIG
+    story.append(Paragraph(f"{sig_val.upper()}{mark(sig_corr)}", sig_style))
+
+    story.append(HRFlowable(
+        width="100%", thickness=0.5, color=colors.HexColor("#cbd5e1"),
+        spaceBefore=12, spaceAfter=12, dash=(2, 2),
+    ))
+
+    # Qty / Days / Refills row (use Table for clean columns)
+    fill_table = Table(
+        [[
+            Paragraph(f"<b>Qty:</b> {qty_val}{mark(qty_corr)}", fill_field_style),
+            Paragraph(f"<b>Days supply:</b> {days_val}{mark(days_corr)}", fill_field_style),
+            Paragraph(f"<b>Refills:</b> {refills_val}{mark(refills_corr)}", fill_field_style),
+        ]],
+        colWidths=[2.17 * inch, 2.17 * inch, 2.17 * inch],
+    )
+    fill_table.setStyle(TableStyle([
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(fill_table)
+
+    story.append(Spacer(1, 14))
+
+    # Prescriber
+    story.append(Paragraph(
+        f"<b>Prescriber:</b> {prescriber['name']}",
+        presc_style,
+    ))
+
+    # Bottom footer
+    story.append(HRFlowable(
+        width="100%", thickness=1.5, color=colors.black,
+        spaceBefore=18, spaceAfter=10,
+    ))
+    story.append(Paragraph("TRAINING ONLY \u00b7 NOT FOR DISPENSING", footer_style))
+
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
+
+
+# =====================================================================
 # Render functions
 # =====================================================================
 
@@ -1023,7 +1330,7 @@ def render_header() -> None:
             </div>
             <div class="stat-chips">
                 <span class="chip">
-                    <span class="chip-label">Cases</span>
+                    <span class="chip-label">Completed</span>
                     <span class="chip-value">{st.session_state.cases_completed}</span>
                 </span>
                 <span class="{acc_class}">
@@ -1184,28 +1491,29 @@ def render_sig_help() -> None:
     if not is_open:
         return
 
-    pairs = [
-        ("PO", "by mouth"),
-        ("QD", "once daily"),
-        ("BID", "twice daily"),
-        ("TID", "three times daily"),
-        ("QHS", "at bedtime"),
-        ("PRN", "as needed"),
-        ("tab", "tablet"),
-        ("cap", "capsule"),
-        ("x", "for (duration)"),
-    ]
-    pair_html = "".join(
-        f'<div class="sig-pair">'
-        f'<span class="sig-abbr">{html.escape(abbr)}</span>'
-        f'<span class="sig-meaning">{html.escape(meaning)}</span>'
-        f'</div>'
-        for abbr, meaning in pairs
-    )
+    sig_shorthand = st.session_state.current_case["rx_text"]["sig_shorthand"]
+    decoded = decode_sig(sig_shorthand)
+
+    if decoded:
+        pair_html = "".join(
+            '<div class="sig-pair">'
+            f'<span class="sig-abbr">{html.escape(token)}</span>'
+            '<span class="sig-eq">=</span>'
+            f'<span class="sig-meaning">{html.escape(meaning)}</span>'
+            '</div>'
+            for token, meaning in decoded
+        )
+    else:
+        pair_html = (
+            '<div style="font-size: 0.85rem; color: #6b7280;">'
+            'No standard abbreviations detected in this SIG.'
+            '</div>'
+        )
+
     decoder_html = (
         '<div class="sig-decoder">'
-        '<div class="sig-decoder-title">Common SIG abbreviations</div>'
-        '<div class="sig-decoder-grid">'
+        f'<div class="sig-decoder-title">Breakdown of: {html.escape(sig_shorthand)}</div>'
+        '<div class="sig-decoder-list">'
         + pair_html
         + '</div>'
         '</div>'
@@ -1604,9 +1912,9 @@ def render_label_preview(case: dict, feedback: dict) -> None:
     """Single label preview using the large print-page style.
 
     Carries .label-print-source so Ctrl+P / Cmd+P prints just this card.
-    The Print / Save Preview button at the bottom uses window.print() so
-    a single click does the same thing. The hint text is always visible
-    in case a browser blocks inline event handlers.
+    The Print / Save Preview button uses window.print() so a single click
+    does the same thing. The Download Label PDF button (below the card)
+    uses reportlab to produce a one-page PDF for save/share.
     """
     inner_html, num_corrections = _build_label_inner_html(case, feedback)
     banner = _build_label_banner_html(num_corrections)
@@ -1633,12 +1941,35 @@ def render_label_preview(case: dict, feedback: dict) -> None:
     )
     st.markdown(label_html, unsafe_allow_html=True)
 
+    # Download Label PDF button - separate Streamlit element below the card.
+    # The PDF is regenerated on each rerun, which is cheap (small one-page doc).
+    col_dl, _ = st.columns([2, 5])
+    with col_dl:
+        if REPORTLAB_AVAILABLE:
+            try:
+                pdf_bytes = build_label_pdf(case, feedback)
+                st.download_button(
+                    label="Download Label PDF",
+                    data=pdf_bytes,
+                    file_name=f"training_label_{case['case_id']}.pdf",
+                    mime="application/pdf",
+                    type="secondary",
+                    key=f"download_label_pdf_{case['case_id']}",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.caption(f"PDF generation failed: {e}")
+        else:
+            st.caption(
+                "Install reportlab to enable PDF download: `pip install reportlab`"
+            )
+
 
 def render_footer() -> None:
     st.markdown('<div class="footer-row"></div>', unsafe_allow_html=True)
     _, _, col_btn = st.columns([6, 2, 1.5])
     with col_btn:
-        if st.button("Reset session", type="secondary", use_container_width=True):
+        if st.button("Start New Session", type="secondary", use_container_width=True):
             reset_session()
             st.rerun()
 
