@@ -642,6 +642,92 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     max-width: 480px;
     margin: 0 auto;
 }
+
+/* ---------- Workflow hint ---------- */
+.workflow-hint {
+    font-size: 0.84rem;
+    color: #6b7280;
+    margin: -4px 0 14px 4px;
+    line-height: 1.5;
+}
+
+/* ---------- Compact success card (all-correct path) ---------- */
+.success-card {
+    background: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+}
+
+.success-card .success-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #047857;
+    line-height: 1.3;
+}
+
+.success-card .success-subtitle {
+    font-size: 0.88rem;
+    color: #065f46;
+    margin-top: 4px;
+}
+
+/* ---------- PDF / Print Preview ---------- */
+.print-instructions {
+    background: #f3f4f6;
+    border-left: 3px solid #0f766e;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.86rem;
+    color: #374151;
+    line-height: 1.55;
+    border-radius: 4px;
+}
+
+.print-instructions strong {
+    color: #0f766e;
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    font-weight: 600;
+}
+
+.print-page-mockup {
+    background: white;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    padding: 36px 28px;
+    border-radius: 4px;
+    margin: 0 auto;
+    max-width: 620px;
+}
+
+/* ---------- @media print: print just the label-print-source area ---------- */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    .label-print-source, .label-print-source * {
+        visibility: visible !important;
+    }
+    .label-print-source {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        padding: 24px !important;
+        background: white !important;
+        border: none !important;
+    }
+    .label-print-source .section-label {
+        display: none !important;
+    }
+    .label-print-source .label-paper {
+        max-width: 600px !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+    .stApp {
+        background: white !important;
+    }
+}
 </style>
 """
 
@@ -933,26 +1019,39 @@ def render_entry_form() -> dict | None:
             '<div style="margin-top: 8px;"></div>',
             unsafe_allow_html=True,
         )
+
+        # Conditional button styling: Check Entry is primary before
+        # submission, Next Case is primary after a perfect entry.
+        submitted = st.session_state.submitted
+        last_fb = st.session_state.last_feedback
+        all_correct = (
+            submitted
+            and bool(last_fb)
+            and all(r["correct"] for r in last_fb.values())
+        )
+        check_type = "primary" if not submitted else "secondary"
+        next_type = "primary" if all_correct else "secondary"
+
         col_a, col_b, col_c, _ = st.columns([1.3, 1.3, 1.3, 3])
         with col_a:
             submit = st.button(
                 "Check Entry",
-                type="primary",
-                disabled=st.session_state.submitted,
+                type=check_type,
+                disabled=submitted,
                 use_container_width=True,
             )
         with col_b:
             try_again_clicked = st.button(
                 "Try Again",
                 type="secondary",
-                disabled=not st.session_state.submitted,
+                disabled=not submitted,
                 use_container_width=True,
             )
         with col_c:
             next_case = st.button(
                 "Next Case",
-                type="secondary",
-                disabled=not st.session_state.submitted,
+                type=next_type,
+                disabled=not submitted,
                 use_container_width=True,
             )
 
@@ -975,29 +1074,8 @@ def render_entry_form() -> dict | None:
     return None
 
 
-def render_feedback() -> None:
-    if not st.session_state.submitted:
-        return
-
-    feedback = st.session_state.last_feedback
-    correct_count = sum(1 for r in feedback.values() if r["correct"])
-    total = len(feedback)
-
-    if correct_count == total:
-        banner = (
-            f'<div class="feedback-summary all-correct">'
-            f'<span class="badge">{correct_count}/{total}</span>'
-            f'All fields correct. Click Next Case to continue.'
-            f'</div>'
-        )
-    else:
-        banner = (
-            f'<div class="feedback-summary partial">'
-            f'<span class="badge">{correct_count}/{total}</span>'
-            f'Some fields need review. See details below.'
-            f'</div>'
-        )
-
+def _build_field_details_html(feedback: dict) -> str:
+    """Build the per-field result row HTML used by both feedback views."""
     items_html = ""
     for field, res in feedback.items():
         label = FIELD_LABELS.get(field, field)
@@ -1006,7 +1084,9 @@ def render_feedback() -> None:
 
         detail_html = ""
         if not res["correct"]:
-            user_safe = html.escape(str(res["user"])) if res["user"] != "" else "(empty)"
+            user_safe = (
+                html.escape(str(res["user"])) if res["user"] != "" else "(empty)"
+            )
             expected_safe = html.escape(str(res["expected"]))
             detail_html = (
                 f'<div class="feedback-detail">'
@@ -1029,6 +1109,36 @@ def render_feedback() -> None:
             f'  {detail_html}'
             f'</div>'
         )
+    return items_html
+
+
+def render_feedback() -> None:
+    """Render the detailed Validation Results card for the mistakes path.
+
+    On all-correct, this function early-returns. main() uses the compact
+    render_success_card + render_feedback_details_expander pair instead.
+    """
+    if not st.session_state.submitted:
+        return
+
+    feedback = st.session_state.last_feedback
+    if not feedback:
+        return
+    correct_count = sum(1 for r in feedback.values() if r["correct"])
+    total = len(feedback)
+
+    # All-correct case is handled separately by main() so the user does
+    # not have to scroll past seven green rows to reach the label.
+    if correct_count == total:
+        return
+
+    banner = (
+        f'<div class="feedback-summary partial">'
+        f'<span class="badge">{correct_count}/{total}</span>'
+        f'Some fields need review. See details below.'
+        f'</div>'
+    )
+    items_html = _build_field_details_html(feedback)
 
     st.markdown(
         f"""
@@ -1040,6 +1150,28 @@ def render_feedback() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_success_card(total: int) -> None:
+    """Compact 'all fields correct' card shown after a perfect entry."""
+    st.markdown(
+        f"""
+        <div class="section-card success-card">
+            <div class="success-title">{total}/{total} fields correct</div>
+            <div class="success-subtitle">Label preview is ready.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_feedback_details_expander(feedback: dict) -> None:
+    """Collapsible per-field detail rows; only used on the all-correct path."""
+    if not feedback:
+        return
+    items_html = _build_field_details_html(feedback)
+    with st.expander("View field details"):
+        st.markdown(items_html, unsafe_allow_html=True)
 
 
 def render_missed_fields_panel() -> None:
@@ -1105,22 +1237,20 @@ def render_label_locked(num_wrong: int, total: int) -> None:
             st.rerun()
 
 
-def render_label_preview(case: dict, feedback: dict) -> None:
-    """Render a pharmacy-label-style preview.
+def _build_label_inner_html(case: dict, feedback: dict) -> tuple[str, int]:
+    """Build the inner HTML of the label (content inside .label-paper).
 
     For each label field: if the user got it right, the user's value is
-    shown. If wrong, the corrected value from the case is shown with a
-    superscript '*' marker. The card always shows a 'training only'
-    banner, upgraded to amber when any corrections are present.
+    used. If wrong, the corrected value from the case is used with a '*'
+    marker. Returns (inner_html, num_corrections) so callers can also
+    render an appropriate banner.
     """
     expected = case["expected"]
     patient = case["patient"]
     prescriber = case["prescriber"]
-
     corrected_fields: list[str] = []
 
     def resolve(field_key: str, corrected_value):
-        """Return (display_str, was_corrected)."""
         res = feedback.get(field_key, {})
         if res.get("correct"):
             return str(res["user"]), False
@@ -1137,33 +1267,11 @@ def render_label_preview(case: dict, feedback: dict) -> None:
     def mark(was_corrected: bool) -> str:
         return '<span class="correction-mark">*</span>' if was_corrected else ""
 
-    # Faux 7-digit Rx number derived from the case id
     digits = "".join(c for c in case["case_id"] if c.isdigit()) or "0"
     rx_num = f"Rx# {int(digits):07d}"
     fill_date = date.today().strftime("%m/%d/%Y")
 
-    num_corrections = len(corrected_fields)
-    if num_corrections == 0:
-        banner = (
-            '<div class="label-warning">'
-            'Training preview only &middot; not for dispensing'
-            '</div>'
-        )
-    else:
-        plural = "s" if num_corrections != 1 else ""
-        banner = (
-            f'<div class="label-warning corrections">'
-            f'{num_corrections} field{plural} shown corrected (marked '
-            f'<span class="correction-mark">*</span>) &middot; '
-            f'training preview only &middot; not for dispensing'
-            f'</div>'
-        )
-
-    label_html = f"""
-    <div class="section-card">
-        <div class="section-label">Label Preview</div>
-        {banner}
-        <div class="label-paper">
+    inner_html = f"""
             <div class="label-pharmacy-row">
                 <div class="label-pharmacy-name">TRAINING PHARMACY</div>
                 <div class="label-rx-num">{rx_num}</div>
@@ -1202,10 +1310,83 @@ def render_label_preview(case: dict, feedback: dict) -> None:
             <div class="label-footer-stamp">
                 Training Only &middot; Not for Dispensing
             </div>
-        </div>
-    </div>
     """
-    st.markdown(label_html, unsafe_allow_html=True)
+    return inner_html, len(corrected_fields)
+
+
+def _build_label_banner_html(num_corrections: int) -> str:
+    """Build the 'training only' banner above the label."""
+    if num_corrections == 0:
+        return (
+            '<div class="label-warning">'
+            'Training preview only &middot; not for dispensing'
+            '</div>'
+        )
+    plural = "s" if num_corrections != 1 else ""
+    return (
+        f'<div class="label-warning corrections">'
+        f'{num_corrections} field{plural} shown corrected (marked '
+        f'<span class="correction-mark">*</span>) &middot; '
+        f'training preview only &middot; not for dispensing'
+        f'</div>'
+    )
+
+
+def render_label_preview(case: dict, feedback: dict) -> None:
+    """Render the on-screen pharmacy label.
+
+    The outer card carries the .label-print-source class. @media print
+    rules use that class to print just this content when the user presses
+    Ctrl+P (or Cmd+P), independently of whether the PDF / Print Preview
+    expander is open.
+    """
+    inner_html, num_corrections = _build_label_inner_html(case, feedback)
+    banner = _build_label_banner_html(num_corrections)
+    st.markdown(
+        f"""
+        <div class="section-card label-print-source">
+            <div class="section-label">Label Preview</div>
+            {banner}
+            <div class="label-paper">
+                {inner_html}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_print_preview_section(case: dict, feedback: dict) -> None:
+    """PDF / Print Preview expander with a print-friendly mockup.
+
+    Visual only; the actual printing is handled by @media print rules
+    that target .label-print-source. This expander gives the user a
+    page-shaped preview plus the Ctrl+P / Cmd+P instruction.
+    """
+    inner_html, num_corrections = _build_label_inner_html(case, feedback)
+    banner = _build_label_banner_html(num_corrections)
+    with st.expander("PDF / Print Preview", expanded=False):
+        st.markdown(
+            """
+            <div class="print-instructions">
+                Use <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac)
+                or your browser's print option to save or print this training
+                label. Training only &middot; not for dispensing.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"""
+            <div class="print-page-mockup">
+                {banner}
+                <div class="label-paper">
+                    {inner_html}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def render_footer() -> None:
@@ -1236,6 +1417,14 @@ def main() -> None:
     # ---- Top: header with title and stat chips ----
     render_header()
 
+    # Workflow hint just below the header
+    st.markdown(
+        '<div class="workflow-hint">'
+        'Read the prescription, enter the required fields, then check your entry.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
     # ---- Workspace ----
     # Row 1: prescription across the top (the source document)
     render_prescription_card(case)
@@ -1249,21 +1438,33 @@ def main() -> None:
         handle_submission(submitted_answers)
         st.rerun()
 
-    # Row 4: feedback (only after a submission)
-    render_feedback()
-
-    # Row 5: label preview - gated if too many fields are wrong
+    # Rows 4+: post-submission output. Two paths so the user does not
+    # have to scroll past a long validation section to reach the label.
     if st.session_state.submitted:
         feedback = st.session_state.last_feedback
-        num_wrong = sum(1 for r in feedback.values() if not r["correct"])
         total = len(feedback)
+        num_wrong = sum(1 for r in feedback.values() if not r["correct"])
+        all_correct = num_wrong == 0
         gate_threshold = 4
-        if num_wrong >= gate_threshold and not st.session_state.label_revealed:
-            render_label_locked(num_wrong, total)
-        else:
-            render_label_preview(case, feedback)
 
-    # Row 6: missed-fields panel (only when populated)
+        if all_correct:
+            # Compact success path: success card -> label -> print preview
+            # -> optional details expander.
+            render_success_card(total)
+            render_label_preview(case, feedback)
+            render_print_preview_section(case, feedback)
+            render_feedback_details_expander(feedback)
+        else:
+            # Mistakes path: detailed feedback first, then the gated label.
+            # Print preview is only offered when the label itself is visible.
+            render_feedback()
+            if num_wrong >= gate_threshold and not st.session_state.label_revealed:
+                render_label_locked(num_wrong, total)
+            else:
+                render_label_preview(case, feedback)
+                render_print_preview_section(case, feedback)
+
+    # Missed-fields panel (only when populated)
     render_missed_fields_panel()
 
     # Footer with reset
