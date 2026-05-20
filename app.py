@@ -1284,6 +1284,41 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     font-style: italic;
 }
 
+/* ---------- Drug Knowledge nav row ---------- */
+.drug-progress {
+    text-align: center;
+    font-size: 0.92rem;
+    color: #4b5563;
+    font-weight: 500;
+    padding-top: 8px;
+    line-height: 1.4;
+}
+
+/* ---------- Workflow Scenarios progress + score row ---------- */
+.scenario-progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.88rem;
+    color: #4b5563;
+    padding: 8px 4px;
+    margin: 10px 0 4px 0;
+}
+
+.scenario-progress-row .scen-progress-text {
+    font-weight: 500;
+}
+
+.scenario-score {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    border: 1px solid #e5e7eb;
+    font-size: 0.82rem;
+}
+
 </style>
 """
 
@@ -1322,6 +1357,20 @@ def init_state() -> None:
         st.session_state.scenario_submitted = False
     if "scenario_choice" not in st.session_state:
         st.session_state.scenario_choice = None
+    if "drug_knowledge_index" not in st.session_state:
+        # Default to the index of the current Prescription Entry case's drug
+        # in DRUG_INFO so users land on that drug the first time they open
+        # Drug Knowledge. After that, Prev/Next buttons drive it independently.
+        keys = list(DRUG_INFO.keys())
+        current_drug = st.session_state.current_case["expected"]["drug_name"].lower().strip()
+        try:
+            st.session_state.drug_knowledge_index = keys.index(current_drug)
+        except ValueError:
+            st.session_state.drug_knowledge_index = 0
+    if "scenario_attempted_ids" not in st.session_state:
+        st.session_state.scenario_attempted_ids = set()
+    if "scenario_correct_ids" not in st.session_state:
+        st.session_state.scenario_correct_ids = set()
 
 
 def advance_case() -> None:
@@ -2495,11 +2544,16 @@ def render_prescription_entry_section() -> None:
 # =====================================================================
 
 def render_drug_knowledge_section() -> None:
-    """Reference card for the drug in the current simulator case."""
-    case = st.session_state.current_case
-    drug_name = case["expected"]["drug_name"]
-    drug_key = drug_name.lower().strip()
-    info = DRUG_INFO.get(drug_key)
+    """Reference card with Prev/Next navigation through all DRUG_INFO entries.
+
+    drug_knowledge_index is independent of current_case after the first
+    initialization; navigation here does not affect Prescription Entry.
+    """
+    keys = list(DRUG_INFO.keys())
+    n = len(keys)
+    current = st.session_state.drug_knowledge_index % n
+    drug_key = keys[current]
+    info = DRUG_INFO[drug_key]
 
     st.markdown(
         '<div class="info-disclaimer">'
@@ -2508,18 +2562,33 @@ def render_drug_knowledge_section() -> None:
         unsafe_allow_html=True,
     )
 
-    st.caption(
-        f"Showing the drug for the current Prescription Entry case: "
-        f"{case['case_id']} \u2014 {case['rx_text']['drug_line']}"
-    )
-
-    if info is None:
-        st.warning(
-            f"No drug reference entry available for {drug_name}. Advance to "
-            "a different case under Prescription Entry to view a covered drug."
+    # ---- Prev / progress / Next navigation row ----
+    col_prev, col_progress, col_next = st.columns([1.5, 3, 1.5])
+    with col_prev:
+        if st.button(
+            "\u2190 Previous Drug",
+            use_container_width=True,
+            key="drug_kb_prev",
+        ):
+            st.session_state.drug_knowledge_index = (current - 1) % n
+            st.rerun()
+    with col_progress:
+        st.markdown(
+            f'<div class="drug-progress">'
+            f'Drug {current + 1} of {n} &middot; {html.escape(info["generic"])}'
+            f'</div>',
+            unsafe_allow_html=True,
         )
-        return
+    with col_next:
+        if st.button(
+            "Next Drug \u2192",
+            use_container_width=True,
+            key="drug_kb_next",
+        ):
+            st.session_state.drug_knowledge_index = (current + 1) % n
+            st.rerun()
 
+    # ---- Drug reference card ----
     with st.container(border=True):
         # Title + category
         st.markdown(
@@ -2583,7 +2652,14 @@ def render_drug_knowledge_section() -> None:
 # =====================================================================
 
 def render_workflow_scenarios_section() -> None:
-    """Pick a scenario, read the situation, choose an action, get feedback."""
+    """Pick a scenario, read the situation, choose an action, get feedback.
+
+    Scoring: a scenario is counted as 'attempted' the first time its
+    Submit is clicked; if that first answer matched best_index, it is
+    counted as 'correct'. Try Again does not retroactively change the
+    score, and switching scenarios does not affect it either. The score
+    is fully separate from Prescription Entry stats.
+    """
     st.markdown(
         '<div class="info-disclaimer">'
         '<strong>Training reference only</strong> &middot; all scenarios use '
@@ -2604,7 +2680,6 @@ def render_workflow_scenarios_section() -> None:
                 use_container_width=True,
                 key=f"scen_pick_{scen['id']}",
             ):
-                # Switching scenarios resets the per-scenario state
                 if st.session_state.get("scenario_id") != scen["id"]:
                     st.session_state.scenario_id = scen["id"]
                     st.session_state.scenario_submitted = False
@@ -2612,6 +2687,22 @@ def render_workflow_scenarios_section() -> None:
                 st.rerun()
 
     scenario = next(s for s in SCENARIOS if s["id"] == active_id)
+    scenario_index = next(
+        i for i, s in enumerate(SCENARIOS) if s["id"] == active_id
+    )
+
+    # ---- Progress + score row ----
+    attempted = len(st.session_state.scenario_attempted_ids)
+    correct = len(st.session_state.scenario_correct_ids)
+    st.markdown(
+        f'<div class="scenario-progress-row">'
+        f'<span class="scen-progress-text">'
+        f'Scenario {scenario_index + 1} of {len(SCENARIOS)}'
+        f'</span>'
+        f'<span class="scenario-score">Scenario score: {correct}/{attempted}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     # ---- Active scenario card ----
     with st.container(border=True):
@@ -2631,7 +2722,6 @@ def render_workflow_scenarios_section() -> None:
             unsafe_allow_html=True,
         )
 
-        # Radio key is scenario-specific so each scenario remembers its own pick
         selected_index = st.radio(
             "Options",
             options=list(range(len(scenario["options"]))),
@@ -2654,6 +2744,11 @@ def render_workflow_scenarios_section() -> None:
                     use_container_width=True,
                     key=f"scen_submit_{scenario['id']}",
                 ):
+                    # Score only the first attempt per scenario
+                    if scenario["id"] not in st.session_state.scenario_attempted_ids:
+                        st.session_state.scenario_attempted_ids.add(scenario["id"])
+                        if selected_index == scenario["best_index"]:
+                            st.session_state.scenario_correct_ids.add(scenario["id"])
                     st.session_state.scenario_id = scenario["id"]
                     st.session_state.scenario_choice = selected_index
                     st.session_state.scenario_submitted = True
@@ -2669,17 +2764,20 @@ def render_workflow_scenarios_section() -> None:
                     st.session_state.scenario_choice = None
                     st.rerun()
 
-    # ---- Feedback after submission ----
+    # ---- Feedback + Next Scenario after submission ----
     if submitted:
         user_choice = st.session_state.scenario_choice
         best = scenario["best_index"]
         is_correct = user_choice == best
+        best_text = scenario["options"][best]
 
         if is_correct:
             st.markdown(
                 '<div class="scenario-feedback-correct">'
                 '<div class="scenario-feedback-title">Best action selected.</div>'
-                f'<div class="scenario-feedback-body">{html.escape(scenario["explanation"])}</div>'
+                '<div class="scenario-feedback-body">'
+                f'<strong>Why:</strong> {html.escape(scenario["explanation"])}'
+                '</div>'
                 '</div>',
                 unsafe_allow_html=True,
             )
@@ -2689,13 +2787,12 @@ def render_workflow_scenarios_section() -> None:
                 if user_choice is not None
                 else "(no choice)"
             )
-            best_text = scenario["options"][best]
             st.markdown(
                 '<div class="scenario-feedback-incorrect">'
                 '<div class="scenario-feedback-title">Not the best action.</div>'
                 '<div class="scenario-feedback-body">'
                 f'<strong>Best action:</strong> {html.escape(best_text)}<br><br>'
-                f'{html.escape(scenario["explanation"])}'
+                f'<strong>Why:</strong> {html.escape(scenario["explanation"])}'
                 '</div>'
                 '<div class="scenario-user-pick">'
                 f'You chose: {html.escape(user_pick_text)}'
@@ -2703,6 +2800,21 @@ def render_workflow_scenarios_section() -> None:
                 '</div>',
                 unsafe_allow_html=True,
             )
+
+        # Next Scenario advance button (wraps around)
+        col_next, _ = st.columns([1.6, 5])
+        with col_next:
+            if st.button(
+                "Next Scenario \u2192",
+                type="primary",
+                use_container_width=True,
+                key="scen_advance",
+            ):
+                next_idx = (scenario_index + 1) % len(SCENARIOS)
+                st.session_state.scenario_id = SCENARIOS[next_idx]["id"]
+                st.session_state.scenario_submitted = False
+                st.session_state.scenario_choice = None
+                st.rerun()
 
 
 # =====================================================================
