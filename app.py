@@ -670,24 +670,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     margin-top: 4px;
 }
 
-/* ---------- PDF / Print Preview ---------- */
-.print-instructions {
-    background: #f3f4f6;
-    border-left: 3px solid #0f766e;
-    padding: 10px 14px;
-    margin-bottom: 16px;
-    font-size: 0.86rem;
-    color: #374151;
-    line-height: 1.55;
-    border-radius: 4px;
-}
-
-.print-instructions strong {
-    color: #0f766e;
-    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
-    font-weight: 600;
-}
-
+/* ---------- Print page mockup ---------- */
 .print-page-mockup {
     background: white;
     border: 1px solid #d1d5db;
@@ -698,24 +681,93 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     max-width: 620px;
 }
 
-/* ---------- Compact label variant (smaller on-screen preview) ---------- */
-.label-paper-compact {
-    max-width: 400px !important;
-    padding: 16px 20px !important;
+/* ---------- See Example button (green) ---------- */
+/* The .see-example-anchor div sits in the same column as the button.
+   :has() finds the element-container containing the anchor, and the
+   adjacent sibling combinator targets the button's element-container. */
+.element-container:has(.see-example-anchor) + .element-container .stButton > button,
+[data-testid="stElementContainer"]:has(.see-example-anchor) + [data-testid="stElementContainer"] .stButton > button {
+    background-color: #047857 !important;
+    border-color: #047857 !important;
+    color: white !important;
 }
 
-.label-paper-compact .label-pharmacy-name { font-size: 0.85rem; }
-.label-paper-compact .label-rx-num { font-size: 0.76rem; }
-.label-paper-compact .label-pharmacy-addr { font-size: 0.7rem; margin-bottom: 10px; padding-bottom: 8px; }
-.label-paper-compact .label-patient-row { font-size: 0.86rem; margin-bottom: 12px; }
-.label-paper-compact .label-patient-row .fill-date { font-size: 0.74rem; }
-.label-paper-compact .label-drug-line { font-size: 0.98rem; margin-bottom: 8px; }
-.label-paper-compact .label-sig-block { font-size: 0.92rem; line-height: 1.5; padding: 8px 0; margin-bottom: 10px; }
-.label-paper-compact .label-fill-row { font-size: 0.82rem; margin-bottom: 8px; padding-bottom: 8px; }
-.label-paper-compact .label-fill-row .fg-label { font-size: 0.68rem; }
-.label-paper-compact .label-prescriber-row { font-size: 0.8rem; }
-.label-paper-compact .label-prescriber-row .pr-label { font-size: 0.68rem; }
-.label-paper-compact .label-footer-stamp { font-size: 0.66rem; margin-top: 12px; padding-top: 8px; }
+.element-container:has(.see-example-anchor) + .element-container .stButton > button:hover:not(:disabled),
+[data-testid="stElementContainer"]:has(.see-example-anchor) + [data-testid="stElementContainer"] .stButton > button:hover:not(:disabled) {
+    background-color: #065f46 !important;
+    border-color: #065f46 !important;
+}
+
+.element-container:has(.see-example-anchor) + .element-container .stButton > button:disabled,
+[data-testid="stElementContainer"]:has(.see-example-anchor) + [data-testid="stElementContainer"] .stButton > button:disabled {
+    background-color: #f0fdf4 !important;
+    border-color: #d1fae5 !important;
+    color: #6b7280 !important;
+    opacity: 1 !important;
+}
+
+/* ---------- Success card variant for example mode (light blue) ---------- */
+.success-card.example-mode {
+    background: #f0f9ff !important;
+    border-color: #bae6fd !important;
+}
+
+.success-card.example-mode .success-title {
+    color: #0369a1;
+}
+
+.success-card.example-mode .success-subtitle {
+    color: #075985;
+}
+
+/* ---------- Print / Save Preview action row inside the label card ---------- */
+.print-action-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 16px auto 0;
+    padding-top: 14px;
+    border-top: 1px solid #f3f4f6;
+    max-width: 620px;
+    flex-wrap: wrap;
+}
+
+.print-action-btn {
+    background-color: #0f766e;
+    color: white;
+    border: 1px solid #0f766e;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+    white-space: nowrap;
+}
+
+.print-action-btn:hover {
+    background-color: #115e59;
+    border-color: #115e59;
+}
+
+.print-action-btn:active {
+    background-color: #134e4a;
+}
+
+.print-hint-text {
+    flex: 1;
+    min-width: 260px;
+    font-size: 0.84rem;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.print-hint-text strong {
+    color: #0f766e;
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    font-weight: 600;
+}
 
 /* ---------- SIG decoder ---------- */
 .sig-decoder {
@@ -760,7 +812,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     color: #374151;
 }
 
-/* ---------- @media print: print the print-preview card's full-size label ---------- */
+/* ---------- @media print: print just the label-print-source area ---------- */
 @media print {
     body * {
         visibility: hidden !important;
@@ -779,7 +831,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
         box-shadow: none !important;
     }
     .label-print-source .section-label,
-    .label-print-source .print-instructions {
+    .label-print-source .print-action-row {
         display: none !important;
     }
     .label-print-source .print-page-mockup {
@@ -827,19 +879,27 @@ def init_state() -> None:
         st.session_state.label_revealed = False
     if "sig_help_open" not in st.session_state:
         st.session_state.sig_help_open = False
+    if "example_mode" not in st.session_state:
+        st.session_state.example_mode = False
 
 
 def advance_case() -> None:
-    """Mark current case complete, load a new one, clear inputs and feedback."""
+    """Mark current case complete, load a new one, clear inputs and feedback.
+
+    If the user is leaving example mode, the case is NOT counted toward
+    cases_completed (example mode is demo, not practice).
+    """
     current_id = st.session_state.current_case["case_id"]
     st.session_state.seen_case_ids.append(current_id)
-    st.session_state.cases_completed += 1
+    if not st.session_state.get("example_mode", False):
+        st.session_state.cases_completed += 1
     st.session_state.current_case = cases.get_random_case(
         st.session_state.seen_case_ids
     )
     st.session_state.submitted = False
     st.session_state.last_feedback = {}
     st.session_state.label_revealed = False
+    st.session_state.example_mode = False
     for k in INPUT_KEYS:
         if k in st.session_state:
             del st.session_state[k]
@@ -851,11 +911,13 @@ def try_again() -> None:
     Inputs are intentionally NOT cleared so the user can fix what was wrong.
     Stats and missed-fields entries from the prior submission remain (each
     Check Entry counts as a real attempt), but handle_submission dedupes
-    missed fields per case so retrying does not pile duplicates.
+    missed fields per case so retrying does not pile duplicates. Exits
+    example mode if it was active.
     """
     st.session_state.submitted = False
     st.session_state.last_feedback = {}
     st.session_state.label_revealed = False
+    st.session_state.example_mode = False
 
 
 def reset_session() -> None:
@@ -872,12 +934,52 @@ def handle_submission(user_answers: dict) -> None:
     st.session_state.last_feedback = results
     st.session_state.submitted = True
     st.session_state.label_revealed = False  # gate resets on every submission
+    st.session_state.example_mode = False    # real submission overrides demo
     tracker.record_results(st.session_state.stats, results)
     # Remove any prior misses from this case so Try Again does not pile up
     # duplicates. The latest attempt's misses are then appended below.
     queue = st.session_state.review_queue
     queue[:] = [item for item in queue if item["case_id"] != case["case_id"]]
     tracker.add_misses_to_review(queue, case["case_id"], results)
+
+
+def show_example() -> None:
+    """Pre-fill the form with the correct answers and mark the case as
+    submitted in example mode.
+
+    For onboarding: lets a new user see what a completed entry looks like
+    plus the full validation + label preview output, without affecting
+    stats or the missed-fields list.
+    """
+    case = st.session_state.current_case
+    expected = case["expected"]
+
+    # Pre-populate the seven input session keys so the form shows them on rerun
+    st.session_state["in_drug"] = expected["drug_name"]
+    st.session_state["in_strength"] = expected["strength"]
+    st.session_state["in_quantity"] = str(expected["quantity"])
+    st.session_state["in_sig"] = expected.get("sig_english", "")
+    st.session_state["in_days"] = str(expected["days_supply"])
+    st.session_state["in_refills"] = str(expected["refills"])
+    st.session_state["in_daw"] = str(expected["daw"])
+
+    # Run the checker on those (perfect) answers to produce a feedback dict
+    user_answers = {
+        "drug_name": expected["drug_name"],
+        "strength": expected["strength"],
+        "quantity": expected["quantity"],
+        "sig": expected.get("sig_english", ""),
+        "days_supply": expected["days_supply"],
+        "refills": expected["refills"],
+        "daw": expected["daw"],
+    }
+    results = checker.check_all(user_answers, expected, case.get("extras"))
+
+    st.session_state.last_feedback = results
+    st.session_state.submitted = True
+    st.session_state.label_revealed = False
+    st.session_state.example_mode = True
+    # Stats and missed-fields queue are intentionally NOT touched.
 
 
 def overall_accuracy() -> tuple[int, int]:
@@ -956,38 +1058,66 @@ def render_prescription_card(case: dict) -> None:
     refills_value = html.escape(_strip_label(rx["refills_text"]))
     daw_value = html.escape(_strip_label(rx["daw_text"]))
 
-    st.markdown(
-        f"""
-        <div class="section-card">
-            <div class="rx-header-row">
-                <div class="section-label">Prescription &middot; {case_id_safe}</div>
-                <div class="rx-meta">
-                    Date written:<span class="meta-value">{date_safe}</span>
-                </div>
-            </div>
-            <div class="rx-drug">{drug_line_safe}</div>
-            <div class="rx-sig-row">
-                <span class="rx-mini-label">Sig</span>
-                <span class="rx-sig">{sig_safe}</span>
-            </div>
-            <div class="rx-tags">
-                <div class="rx-tag">
-                    <span class="rx-mini-label">Disp</span>
-                    <span class="{disp_class}">{disp_value}</span>
-                </div>
-                <div class="rx-tag">
-                    <span class="rx-mini-label">Refills</span>
-                    <span class="rx-tag-value">{refills_value}</span>
-                </div>
-                <div class="rx-tag">
-                    <span class="rx-mini-label">DAW</span>
-                    <span class="rx-tag-value">{daw_value}</span>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        # Header row
+        st.markdown(
+            '<div class="rx-header-row">'
+            f'<div class="section-label">Prescription &middot; {case_id_safe}</div>'
+            f'<div class="rx-meta">Date written:<span class="meta-value">{date_safe}</span></div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Drug line + See Example button on the far right of the same row
+        col_drug, col_btn = st.columns([5, 1.4])
+        with col_drug:
+            st.markdown(
+                f'<div class="rx-drug">{drug_line_safe}</div>',
+                unsafe_allow_html=True,
+            )
+        with col_btn:
+            # Anchor for the green :has() CSS selector to find this button
+            st.markdown(
+                '<div class="see-example-anchor"></div>',
+                unsafe_allow_html=True,
+            )
+            if st.button(
+                "See Example",
+                type="secondary",
+                key="see_example_btn",
+                use_container_width=True,
+                disabled=st.session_state.get("submitted", False),
+            ):
+                show_example()
+                st.rerun()
+
+        # Sig row
+        st.markdown(
+            '<div class="rx-sig-row">'
+            '<span class="rx-mini-label">Sig</span>'
+            f'<span class="rx-sig">{sig_safe}</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Tags row
+        st.markdown(
+            '<div class="rx-tags">'
+            '<div class="rx-tag">'
+            '<span class="rx-mini-label">Disp</span>'
+            f'<span class="{disp_class}">{disp_value}</span>'
+            '</div>'
+            '<div class="rx-tag">'
+            '<span class="rx-mini-label">Refills</span>'
+            f'<span class="rx-tag-value">{refills_value}</span>'
+            '</div>'
+            '<div class="rx-tag">'
+            '<span class="rx-mini-label">DAW</span>'
+            f'<span class="rx-tag-value">{daw_value}</span>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
 
 def _party_card_html(title: str, rows: list[tuple[str, str]]) -> str:
@@ -1273,12 +1403,30 @@ def render_feedback() -> None:
     st.markdown(full_html, unsafe_allow_html=True)
 
 
-def render_success_card(total: int) -> None:
-    """Compact 'all fields correct' card shown after a perfect entry."""
+def render_success_card(total: int, example_mode: bool = False) -> None:
+    """Compact card shown after a perfect entry.
+
+    When example_mode is True (the user clicked See Example), the copy
+    and color switch to a 'demo' palette so it is visually distinct from
+    a real perfect score and the user knows their stats are untouched.
+    """
+    if example_mode:
+        card_class = "section-card success-card example-mode"
+        title = "Example shown"
+        subtitle = (
+            f"All {total} fields pre-filled with the correct answer. "
+            "This does not count toward your stats. Click Try Again to "
+            "practice on your own, or Next Case to continue."
+        )
+    else:
+        card_class = "section-card success-card"
+        title = f"{total}/{total} fields correct"
+        subtitle = "Label preview is ready."
+
     html_str = (
-        '<div class="section-card success-card">'
-        f'<div class="success-title">{total}/{total} fields correct</div>'
-        '<div class="success-subtitle">Label preview is ready.</div>'
+        f'<div class="{card_class}">'
+        f'<div class="success-title">{title}</div>'
+        f'<div class="success-subtitle">{subtitle}</div>'
         '</div>'
     )
     st.markdown(html_str, unsafe_allow_html=True)
@@ -1453,52 +1601,37 @@ def _build_label_banner_html(num_corrections: int) -> str:
 
 
 def render_label_preview(case: dict, feedback: dict) -> None:
-    """Compact on-screen pharmacy label preview.
+    """Single label preview using the large print-page style.
 
-    Smaller than the PDF/Print Preview; this is a quick visual confirmation.
-    The PDF/Print Preview card below carries .label-print-source, so Ctrl+P
-    prints the full-size version, not this compact one.
+    Carries .label-print-source so Ctrl+P / Cmd+P prints just this card.
+    The Print / Save Preview button at the bottom uses window.print() so
+    a single click does the same thing. The hint text is always visible
+    in case a browser blocks inline event handlers.
     """
     inner_html, num_corrections = _build_label_inner_html(case, feedback)
     banner = _build_label_banner_html(num_corrections)
     label_html = (
-        '<div class="section-card">'
+        '<div class="section-card label-print-source">'
         '<div class="section-label">Label Preview</div>'
         + banner
-        + '<div class="label-paper label-paper-compact">'
-        + inner_html
-        + '</div>'
-        '</div>'
-    )
-    st.markdown(label_html, unsafe_allow_html=True)
-
-
-def render_print_preview_section(case: dict, feedback: dict) -> None:
-    """Prominent PDF / Print Preview card. Always visible (no expander).
-
-    Carries .label-print-source so @media print rules target this card
-    when the user presses Ctrl+P or Cmd+P, printing a clean full-size
-    version of the label with the chrome stripped away.
-    """
-    inner_html, num_corrections = _build_label_inner_html(case, feedback)
-    banner = _build_label_banner_html(num_corrections)
-    print_html = (
-        '<div class="section-card label-print-source">'
-        '<div class="section-label">PDF / Print Preview</div>'
-        '<div class="print-instructions">'
-        'Use <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) or your '
-        "browser's print option to save or print this training label. "
-        'Training only &middot; not for dispensing.'
-        '</div>'
-        '<div class="print-page-mockup">'
-        + banner
+        + '<div class="print-page-mockup">'
         + '<div class="label-paper">'
         + inner_html
         + '</div>'
         '</div>'
+        '<div class="print-action-row">'
+        '<button class="print-action-btn" onclick="window.print()" type="button">'
+        'Print / Save Preview'
+        '</button>'
+        '<div class="print-hint-text">'
+        'Use <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) or your '
+        "browser's print option to save or print this training label. "
+        'Training only &middot; not for dispensing.'
+        '</div>'
+        '</div>'
         '</div>'
     )
-    st.markdown(print_html, unsafe_allow_html=True)
+    st.markdown(label_html, unsafe_allow_html=True)
 
 
 def render_footer() -> None:
@@ -1563,21 +1696,17 @@ def main() -> None:
         gate_threshold = 4
 
         if all_correct:
-            # Compact success path: success card -> label -> print preview
-            # -> optional details expander.
-            render_success_card(total)
+            # Compact success path: success card -> label -> optional details expander.
+            render_success_card(total, example_mode=st.session_state.example_mode)
             render_label_preview(case, feedback)
-            render_print_preview_section(case, feedback)
             render_feedback_details_expander(feedback)
         else:
             # Mistakes path: detailed feedback first, then the gated label.
-            # Print preview is only offered when the label itself is visible.
             render_feedback()
             if num_wrong >= gate_threshold and not st.session_state.label_revealed:
                 render_label_locked(num_wrong, total)
             else:
                 render_label_preview(case, feedback)
-                render_print_preview_section(case, feedback)
 
     # Missed-fields panel (only when populated)
     render_missed_fields_panel()
