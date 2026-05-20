@@ -10,6 +10,7 @@ Run with:
 from __future__ import annotations
 
 import html
+from datetime import date
 
 import streamlit as st
 
@@ -459,6 +460,164 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     padding-top: 14px;
     border-top: 1px solid #e5e7eb;
 }
+
+/* ---------- Label Preview ---------- */
+.label-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+    padding: 8px 14px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    font-size: 0.82rem;
+    text-align: center;
+    font-weight: 500;
+}
+
+.label-warning.corrections {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.label-paper {
+    background: #fefefe;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 18px 22px;
+    max-width: 480px;
+    margin: 0 auto;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.label-pharmacy-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+}
+
+.label-pharmacy-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.label-rx-num {
+    font-size: 0.78rem;
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    color: #1f2937;
+}
+
+.label-pharmacy-addr {
+    font-size: 0.72rem;
+    color: #4b5563;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.label-patient-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+    font-size: 0.88rem;
+}
+
+.label-patient-row .pt-name {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #0f172a;
+}
+
+.label-patient-row .fill-date {
+    font-size: 0.76rem;
+    color: #4b5563;
+}
+
+.label-drug-line {
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+.label-sig-block {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    text-transform: uppercase;
+    padding: 10px 0;
+    border-top: 1px dashed #cbd5e1;
+    border-bottom: 1px dashed #cbd5e1;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.label-fill-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.label-fill-row .fg-label {
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    margin-right: 4px;
+}
+
+.label-fill-row .fg-value {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.label-prescriber-row {
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+}
+
+.label-prescriber-row .pr-label {
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    margin-right: 6px;
+}
+
+.label-prescriber-row .pr-name {
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.label-footer-stamp {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 2px solid #0f172a;
+    text-align: center;
+    font-size: 0.7rem;
+    color: #4b5563;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.correction-mark {
+    color: #b45309;
+    font-weight: 700;
+    margin-left: 2px;
+}
 </style>
 """
 
@@ -862,6 +1021,109 @@ def render_review_queue_panel() -> None:
     )
 
 
+def render_label_preview(case: dict, feedback: dict) -> None:
+    """Render a pharmacy-label-style preview.
+
+    For each label field: if the user got it right, the user's value is
+    shown. If wrong, the corrected value from the case is shown with a
+    superscript '*' marker. The card always shows a 'training only'
+    banner, upgraded to amber when any corrections are present.
+    """
+    expected = case["expected"]
+    patient = case["patient"]
+    prescriber = case["prescriber"]
+
+    corrected_fields: list[str] = []
+
+    def resolve(field_key: str, corrected_value):
+        """Return (display_str, was_corrected)."""
+        res = feedback.get(field_key, {})
+        if res.get("correct"):
+            return str(res["user"]), False
+        corrected_fields.append(FIELD_LABELS.get(field_key, field_key))
+        return str(corrected_value), True
+
+    drug_val, drug_corr = resolve("drug_name", expected["drug_name"])
+    strength_val, strength_corr = resolve("strength", expected["strength"])
+    sig_val, sig_corr = resolve("sig", expected.get("sig_english", ""))
+    qty_val, qty_corr = resolve("quantity", expected["quantity"])
+    days_val, days_corr = resolve("days_supply", expected["days_supply"])
+    refills_val, refills_corr = resolve("refills", expected["refills"])
+
+    def mark(was_corrected: bool) -> str:
+        return '<span class="correction-mark">*</span>' if was_corrected else ""
+
+    # Faux 7-digit Rx number derived from the case id
+    digits = "".join(c for c in case["case_id"] if c.isdigit()) or "0"
+    rx_num = f"Rx# {int(digits):07d}"
+    fill_date = date.today().strftime("%m/%d/%Y")
+
+    num_corrections = len(corrected_fields)
+    if num_corrections == 0:
+        banner = (
+            '<div class="label-warning">'
+            'Training preview only &middot; not for dispensing'
+            '</div>'
+        )
+    else:
+        plural = "s" if num_corrections != 1 else ""
+        banner = (
+            f'<div class="label-warning corrections">'
+            f'{num_corrections} field{plural} shown corrected (marked '
+            f'<span class="correction-mark">*</span>) &middot; '
+            f'training preview only &middot; not for dispensing'
+            f'</div>'
+        )
+
+    label_html = f"""
+    <div class="section-card">
+        <div class="section-label">Label Preview</div>
+        {banner}
+        <div class="label-paper">
+            <div class="label-pharmacy-row">
+                <div class="label-pharmacy-name">TRAINING PHARMACY</div>
+                <div class="label-rx-num">{rx_num}</div>
+            </div>
+            <div class="label-pharmacy-addr">
+                123 Sample Street &middot; Sample City, TX 78000 &middot; (555) 000-0000
+            </div>
+            <div class="label-patient-row">
+                <span class="pt-name">{html.escape(patient["name"])}</span>
+                <span class="fill-date">Filled: {fill_date}</span>
+            </div>
+            <div class="label-drug-line">
+                {html.escape(drug_val)}{mark(drug_corr)} {html.escape(strength_val)}{mark(strength_corr)}
+            </div>
+            <div class="label-sig-block">
+                {html.escape(sig_val)}{mark(sig_corr)}
+            </div>
+            <div class="label-fill-row">
+                <span>
+                    <span class="fg-label">Qty:</span>
+                    <span class="fg-value">{html.escape(str(qty_val))}{mark(qty_corr)}</span>
+                </span>
+                <span>
+                    <span class="fg-label">Days supply:</span>
+                    <span class="fg-value">{html.escape(str(days_val))}{mark(days_corr)}</span>
+                </span>
+                <span>
+                    <span class="fg-label">Refills:</span>
+                    <span class="fg-value">{html.escape(str(refills_val))}{mark(refills_corr)}</span>
+                </span>
+            </div>
+            <div class="label-prescriber-row">
+                <span class="pr-label">Prescriber:</span>
+                <span class="pr-name">{html.escape(prescriber["name"])}</span>
+            </div>
+            <div class="label-footer-stamp">
+                Training Only &middot; Not for Dispensing
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(label_html, unsafe_allow_html=True)
+
+
 def render_footer() -> None:
     st.markdown('<div class="footer-row"></div>', unsafe_allow_html=True)
     _, _, col_btn = st.columns([6, 2, 1.5])
@@ -906,7 +1168,11 @@ def main() -> None:
     # Row 4: feedback (only after a submission)
     render_feedback()
 
-    # Row 5: review queue (only when populated)
+    # Row 5: label preview (only after a submission)
+    if st.session_state.submitted:
+        render_label_preview(case, st.session_state.last_feedback)
+
+    # Row 6: review queue (only when populated)
     render_review_queue_panel()
 
     # Footer with reset
