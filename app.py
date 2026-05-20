@@ -123,8 +123,8 @@ footer                              { display: none; }
 
 .chip-label { color: #6b7280; }
 .chip-value { font-weight: 600; color: #0f766e; }
-.chip.review .chip-value         { color: #b45309; }
-.chip.review.empty .chip-value   { color: #4b5563; }
+.chip.missed .chip-value         { color: #b45309; }
+.chip.missed.empty .chip-value   { color: #4b5563; }
 .chip.accuracy-low .chip-value   { color: #b91c1c; }
 
 /* ---------- Generic card (HTML-only) ---------- */
@@ -419,14 +419,14 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     line-height: 1.5;
 }
 
-/* ---------- Review queue panel ---------- */
-.review-list {
+/* ---------- Missed fields panel ---------- */
+.missed-list {
     display: flex;
     flex-direction: column;
     gap: 5px;
 }
 
-.review-row {
+.missed-row {
     display: flex;
     gap: 10px;
     font-size: 0.82rem;
@@ -435,22 +435,22 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border-bottom: 1px dashed #f3f4f6;
 }
 
-.review-row:last-child { border-bottom: none; }
+.missed-row:last-child { border-bottom: none; }
 
-.review-row .case-id {
+.missed-row .case-id {
     color: #9ca3af;
     font-family: "SF Mono", Menlo, Consolas, monospace;
     font-size: 0.78rem;
     min-width: 60px;
 }
 
-.review-row .field {
+.missed-row .field {
     font-weight: 600;
     color: #111827;
     min-width: 110px;
 }
 
-.review-row .expected {
+.missed-row .expected {
     color: #4b5563;
 }
 
@@ -483,8 +483,8 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     background: #fefefe;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
-    padding: 18px 22px;
-    max-width: 480px;
+    padding: 22px 28px;
+    max-width: 560px;
     margin: 0 auto;
     color: #0f172a;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -500,22 +500,22 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 }
 
 .label-pharmacy-name {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: 0.04em;
 }
 
 .label-rx-num {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
     color: #1f2937;
 }
 
 .label-pharmacy-addr {
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     color: #4b5563;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
     border-bottom: 1px dashed #cbd5e1;
 }
 
@@ -523,8 +523,8 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 14px;
-    font-size: 0.88rem;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
 }
 
 .label-patient-row .pt-name {
@@ -535,46 +535,46 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 }
 
 .label-patient-row .fill-date {
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     color: #4b5563;
 }
 
 .label-drug-line {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     line-height: 1.3;
 }
 
 .label-sig-block {
-    font-size: 0.95rem;
-    line-height: 1.5;
+    font-size: 1.08rem;
+    line-height: 1.6;
     text-transform: uppercase;
-    padding: 10px 0;
+    padding: 12px 0;
     border-top: 1px dashed #cbd5e1;
     border-bottom: 1px dashed #cbd5e1;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     font-weight: 500;
 }
 
 .label-fill-row {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
     flex-wrap: wrap;
-    font-size: 0.85rem;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
+    font-size: 0.92rem;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
     border-bottom: 1px dashed #cbd5e1;
 }
 
 .label-fill-row .fg-label {
     color: #6b7280;
     text-transform: uppercase;
-    font-size: 0.7rem;
+    font-size: 0.74rem;
     letter-spacing: 0.05em;
-    margin-right: 4px;
+    margin-right: 5px;
 }
 
 .label-fill-row .fg-value {
@@ -583,14 +583,14 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 }
 
 .label-prescriber-row {
-    font-size: 0.82rem;
+    font-size: 0.9rem;
     margin-bottom: 4px;
 }
 
 .label-prescriber-row .pr-label {
     color: #6b7280;
     text-transform: uppercase;
-    font-size: 0.7rem;
+    font-size: 0.74rem;
     letter-spacing: 0.05em;
     margin-right: 6px;
 }
@@ -602,11 +602,11 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 }
 
 .label-footer-stamp {
-    margin-top: 14px;
-    padding-top: 10px;
+    margin-top: 16px;
+    padding-top: 12px;
     border-top: 2px solid #0f172a;
     text-align: center;
-    font-size: 0.7rem;
+    font-size: 0.74rem;
     color: #4b5563;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -617,6 +617,30 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     color: #b45309;
     font-weight: 700;
     margin-left: 2px;
+}
+
+/* ---------- Label locked (gated) state ---------- */
+.label-locked {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    padding: 18px 22px;
+    text-align: center;
+}
+
+.label-locked .lock-title {
+    font-weight: 600;
+    color: #92400e;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+}
+
+.label-locked .lock-body {
+    color: #78350f;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    max-width: 480px;
+    margin: 0 auto;
 }
 </style>
 """
@@ -642,6 +666,8 @@ def init_state() -> None:
         st.session_state.seen_case_ids = []
     if "cases_completed" not in st.session_state:
         st.session_state.cases_completed = 0
+    if "label_revealed" not in st.session_state:
+        st.session_state.label_revealed = False
 
 
 def advance_case() -> None:
@@ -654,9 +680,23 @@ def advance_case() -> None:
     )
     st.session_state.submitted = False
     st.session_state.last_feedback = {}
+    st.session_state.label_revealed = False
     for k in INPUT_KEYS:
         if k in st.session_state:
             del st.session_state[k]
+
+
+def try_again() -> None:
+    """Return to editing the same case without advancing.
+
+    Inputs are intentionally NOT cleared so the user can fix what was wrong.
+    Stats and missed-fields entries from the prior submission remain (each
+    Check Entry counts as a real attempt), but handle_submission dedupes
+    missed fields per case so retrying does not pile duplicates.
+    """
+    st.session_state.submitted = False
+    st.session_state.last_feedback = {}
+    st.session_state.label_revealed = False
 
 
 def reset_session() -> None:
@@ -667,17 +707,18 @@ def reset_session() -> None:
 
 
 def handle_submission(user_answers: dict) -> None:
-    """Run the checker, update stats, append misses to the review queue."""
+    """Run the checker, update stats, append misses to the missed-fields list."""
     case = st.session_state.current_case
     results = checker.check_all(user_answers, case["expected"], case.get("extras"))
     st.session_state.last_feedback = results
     st.session_state.submitted = True
+    st.session_state.label_revealed = False  # gate resets on every submission
     tracker.record_results(st.session_state.stats, results)
-    tracker.add_misses_to_review(
-        st.session_state.review_queue,
-        case["case_id"],
-        results,
-    )
+    # Remove any prior misses from this case so Try Again does not pile up
+    # duplicates. The latest attempt's misses are then appended below.
+    queue = st.session_state.review_queue
+    queue[:] = [item for item in queue if item["case_id"] != case["case_id"]]
+    tracker.add_misses_to_review(queue, case["case_id"], results)
 
 
 def overall_accuracy() -> tuple[int, int]:
@@ -710,7 +751,7 @@ def render_header() -> None:
         acc_class = "chip"
 
     review_count = len(st.session_state.review_queue)
-    review_class = "chip review" + ("" if review_count else " empty")
+    missed_class = "chip missed" + ("" if review_count else " empty")
 
     st.markdown(
         f"""
@@ -728,8 +769,8 @@ def render_header() -> None:
                     <span class="chip-label">Accuracy</span>
                     <span class="chip-value">{acc_str}</span>
                 </span>
-                <span class="{review_class}">
-                    <span class="chip-label">Review queue</span>
+                <span class="{missed_class}">
+                    <span class="chip-label">Missed fields</span>
                     <span class="chip-value">{review_count}</span>
                 </span>
             </div>
@@ -892,7 +933,7 @@ def render_entry_form() -> dict | None:
             '<div style="margin-top: 8px;"></div>',
             unsafe_allow_html=True,
         )
-        col_a, col_b, _ = st.columns([1.2, 1.2, 4])
+        col_a, col_b, col_c, _ = st.columns([1.3, 1.3, 1.3, 3])
         with col_a:
             submit = st.button(
                 "Check Entry",
@@ -901,6 +942,13 @@ def render_entry_form() -> dict | None:
                 use_container_width=True,
             )
         with col_b:
+            try_again_clicked = st.button(
+                "Try Again",
+                type="secondary",
+                disabled=not st.session_state.submitted,
+                use_container_width=True,
+            )
+        with col_c:
             next_case = st.button(
                 "Next Case",
                 type="secondary",
@@ -918,6 +966,9 @@ def render_entry_form() -> dict | None:
             "refills": refills,
             "daw": daw,
         }
+    if try_again_clicked:
+        try_again()
+        st.rerun()
     if next_case:
         advance_case()
         st.rerun()
@@ -991,8 +1042,8 @@ def render_feedback() -> None:
     )
 
 
-def render_review_queue_panel() -> None:
-    """Compact review queue summary, shown only when there are misses."""
+def render_missed_fields_panel() -> None:
+    """Compact panel showing recent missed fields. Hidden when empty."""
     queue = st.session_state.review_queue
     if not queue:
         return
@@ -1001,7 +1052,7 @@ def render_review_queue_panel() -> None:
     rows_html = ""
     for item in recent:
         rows_html += (
-            f'<div class="review-row">'
+            f'<div class="missed-row">'
             f'  <span class="case-id">{html.escape(item["case_id"])}</span>'
             f'  <span class="field">{html.escape(FIELD_LABELS.get(item["field"], item["field"]))}</span>'
             f'  <span class="expected">Expected: '
@@ -1013,12 +1064,45 @@ def render_review_queue_panel() -> None:
     st.markdown(
         f"""
         <div class="section-card">
-            <div class="section-label">Review Queue &middot; recent misses</div>
-            <div class="review-list">{rows_html}</div>
+            <div class="section-label">Missed Fields &middot; recent</div>
+            <div class="missed-list">{rows_html}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_label_locked(num_wrong: int, total: int) -> None:
+    """Show a 'try again first' panel when too many fields are wrong.
+
+    Includes a Reveal Label Preview button that flips st.session_state
+    .label_revealed to True so the full label can be rendered.
+    """
+    st.markdown(
+        f"""
+        <div class="section-card">
+            <div class="section-label">Label Preview</div>
+            <div class="label-locked">
+                <div class="lock-title">Try again first</div>
+                <div class="lock-body">
+                    {num_wrong} of {total} fields were incorrect. Fix your
+                    entry and re-check, or reveal the corrected label anyway.
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    col_a, _ = st.columns([2, 5])
+    with col_a:
+        if st.button(
+            "Reveal Label Preview",
+            type="secondary",
+            use_container_width=True,
+            key="reveal_label_btn",
+        ):
+            st.session_state.label_revealed = True
+            st.rerun()
 
 
 def render_label_preview(case: dict, feedback: dict) -> None:
@@ -1168,12 +1252,19 @@ def main() -> None:
     # Row 4: feedback (only after a submission)
     render_feedback()
 
-    # Row 5: label preview (only after a submission)
+    # Row 5: label preview - gated if too many fields are wrong
     if st.session_state.submitted:
-        render_label_preview(case, st.session_state.last_feedback)
+        feedback = st.session_state.last_feedback
+        num_wrong = sum(1 for r in feedback.values() if not r["correct"])
+        total = len(feedback)
+        gate_threshold = 4
+        if num_wrong >= gate_threshold and not st.session_state.label_revealed:
+            render_label_locked(num_wrong, total)
+        else:
+            render_label_preview(case, feedback)
 
-    # Row 6: review queue (only when populated)
-    render_review_queue_panel()
+    # Row 6: missed-fields panel (only when populated)
+    render_missed_fields_panel()
 
     # Footer with reset
     render_footer()
