@@ -9,7 +9,6 @@ Run with:
 """
 from __future__ import annotations
 
-import base64
 import html
 import re
 from datetime import date
@@ -869,8 +868,6 @@ def init_state() -> None:
         st.session_state.sig_help_open = False
     if "example_mode" not in st.session_state:
         st.session_state.example_mode = False
-    if "pdf_preview_open" not in st.session_state:
-        st.session_state.pdf_preview_open = False
 
 
 def advance_case() -> None:
@@ -890,7 +887,6 @@ def advance_case() -> None:
     st.session_state.last_feedback = {}
     st.session_state.label_revealed = False
     st.session_state.example_mode = False
-    st.session_state.pdf_preview_open = False
     for k in INPUT_KEYS:
         if k in st.session_state:
             del st.session_state[k]
@@ -909,7 +905,6 @@ def try_again() -> None:
     st.session_state.last_feedback = {}
     st.session_state.label_revealed = False
     st.session_state.example_mode = False
-    st.session_state.pdf_preview_open = False
 
 
 def reset_session() -> None:
@@ -927,7 +922,6 @@ def handle_submission(user_answers: dict) -> None:
     st.session_state.submitted = True
     st.session_state.label_revealed = False  # gate resets on every submission
     st.session_state.example_mode = False    # real submission overrides demo
-    st.session_state.pdf_preview_open = False  # new submission collapses preview
     tracker.record_results(st.session_state.stats, results)
     # Remove any prior misses from this case so Try Again does not pile up
     # duplicates. The latest attempt's misses are then appended below.
@@ -972,7 +966,6 @@ def show_example() -> None:
     st.session_state.submitted = True
     st.session_state.label_revealed = False
     st.session_state.example_mode = True
-    st.session_state.pdf_preview_open = False
     # Stats and missed-fields queue are intentionally NOT touched.
 
 
@@ -1879,14 +1872,15 @@ def _build_label_banner_html(num_corrections: int) -> str:
 
 
 def render_label_preview(case: dict, feedback: dict) -> None:
-    """Label preview card + a single 'Print / Save Preview' workflow.
+    """Label preview card + single Download Label PDF action.
 
-    The button toggles an embedded PDF preview (base64 data-URI iframe).
-    When open, a Download PDF button and instructions appear below.
-    The same build_label_pdf function powers both the iframe source
-    and the download button - one PDF, one workflow.
+    The card itself shows the on-screen label mockup so the user can read
+    every field before deciding to download. No embedded iframe (Chrome
+    blocks data:application/pdf iframes); just a clean download button
+    that streams the same reportlab-generated PDF to the user's machine,
+    where their PDF viewer handles printing and saving.
     """
-    # ---- Label card (the on-screen mockup, .label-print-source for @media print) ----
+    # ---- Label card (on-screen mockup, .label-print-source for @media print) ----
     inner_html, num_corrections = _build_label_inner_html(case, feedback)
     banner = _build_label_banner_html(num_corrections)
     label_html = (
@@ -1902,89 +1896,31 @@ def render_label_preview(case: dict, feedback: dict) -> None:
     )
     st.markdown(label_html, unsafe_allow_html=True)
 
-    # ---- Print / Save Preview toggle button ----
-    preview_open = st.session_state.get("pdf_preview_open", False)
+    # ---- Download Label PDF action row ----
     col_btn, col_hint = st.columns([2, 5])
     with col_btn:
-        if not preview_open:
-            if st.button(
-                "Print / Save Preview",
-                type="primary",
-                key="open_pdf_preview_btn",
-                use_container_width=True,
-            ):
-                st.session_state.pdf_preview_open = True
-                st.rerun()
+        if REPORTLAB_AVAILABLE:
+            try:
+                pdf_bytes = build_label_pdf(case, feedback)
+                st.download_button(
+                    label="Download Label PDF",
+                    data=pdf_bytes,
+                    file_name=f"training_label_{case['case_id']}.pdf",
+                    mime="application/pdf",
+                    type="primary",
+                    key=f"download_label_pdf_{case['case_id']}",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.caption(f"PDF generation failed: {e}")
         else:
-            if st.button(
-                "Hide PDF preview",
-                type="secondary",
-                key="close_pdf_preview_btn",
-                use_container_width=True,
-            ):
-                st.session_state.pdf_preview_open = False
-                st.rerun()
-    with col_hint:
-        if preview_open:
-            hint = "Training only &middot; not for dispensing."
-        else:
-            hint = (
-                "Opens an inline PDF preview with a download button. "
-                "Training only &middot; not for dispensing."
+            st.caption(
+                "Install reportlab to enable PDF download: `pip install reportlab`"
             )
-        st.markdown(
-            f'<div class="print-hint-text" style="padding-top: 8px;">{hint}</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ---- PDF preview area: iframe + download + instructions (only when open) ----
-    if not preview_open:
-        return
-
-    if not REPORTLAB_AVAILABLE:
-        st.warning(
-            "PDF preview requires reportlab. Install it with: "
-            "`pip install reportlab`"
-        )
-        return
-
-    try:
-        pdf_bytes = build_label_pdf(case, feedback)
-    except Exception as e:
-        st.error(f"PDF generation failed: {e}")
-        return
-
-    # Embed PDF as a base64 data-URI iframe. Modern browsers (Chrome, Edge,
-    # Safari, Firefox) render PDFs inline this way. The iframe itself usually
-    # ships a download/print/zoom toolbar.
-    b64 = base64.b64encode(pdf_bytes).decode("ascii")
-    iframe_html = (
-        f'<iframe src="data:application/pdf;base64,{b64}" '
-        'width="100%" height="600" '
-        'style="border: 1px solid #d1d5db; border-radius: 6px; '
-        'margin-top: 14px; background: #f9fafb;" '
-        'title="Training Label PDF Preview">'
-        '</iframe>'
-    )
-    st.markdown(iframe_html, unsafe_allow_html=True)
-
-    # Download button + instructions row
-    col_dl, col_instr = st.columns([2, 5])
-    with col_dl:
-        st.download_button(
-            label="Download PDF",
-            data=pdf_bytes,
-            file_name=f"training_label_{case['case_id']}.pdf",
-            mime="application/pdf",
-            type="primary",
-            key=f"download_pdf_{case['case_id']}",
-            use_container_width=True,
-        )
-    with col_instr:
+    with col_hint:
         st.markdown(
             '<div class="print-hint-text" style="padding-top: 8px;">'
-            'Use the <strong>Download PDF</strong> button or your browser '
-            'print option to save/print this training label. '
+            'Open the downloaded PDF to print or save this training label. '
             'Training only &middot; not for dispensing.'
             '</div>',
             unsafe_allow_html=True,
