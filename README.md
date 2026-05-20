@@ -39,7 +39,7 @@ in a browser.
 | `app.py` | Streamlit UI and session-state wiring. Only file importing streamlit. |
 | `cases.py` | Fake prescription cases and a random-case selector. |
 | `checker.py` | Pure per-field validation functions. No streamlit dependency. |
-| `tracker.py` | Session stats and review-queue helpers. Operate on plain dicts. |
+| `tracker.py` | Session stats and missed-fields helpers. Operate on plain dicts. |
 | `requirements.txt` | Pinned to streamlit only for v1. |
 | `README.md` | This file. |
 
@@ -75,7 +75,7 @@ substring of `three times daily`.
 - 6 prescription cases covering acute antibiotics and chronic oral medications
 - Per-field validation with English explanations and calculation hints
 - Per-field session accuracy and weakest-field identification
-- Review queue of missed items, visible in the sidebar
+- Missed fields panel showing recent misses, rendered in-page (no sidebar)
 - Reset-session button
 
 ## What v1 does not do
