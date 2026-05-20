@@ -162,6 +162,7 @@ CASES: list[dict] = [
         },
         "extras": {
             "drug_alternates": ["prinivil", "zestril"],
+            "quantity_calc": "Disp line on the Rx shows 30 tablets.",
             "days_calc": "30 tablets at 1 tablet per day = 30 days supply.",
         },
     },
@@ -208,6 +209,7 @@ CASES: list[dict] = [
         },
         "extras": {
             "drug_alternates": ["glucophage"],
+            "quantity_calc": "Disp line on the Rx shows 60 tablets.",
             "days_calc": "60 tablets at 2 tablets per day = 30 days supply.",
         },
     },
@@ -254,6 +256,7 @@ CASES: list[dict] = [
         },
         "extras": {
             "drug_alternates": ["lipitor"],
+            "quantity_calc": "Disp line on the Rx shows 30 tablets.",
             "days_calc": "30 tablets at 1 tablet per day = 30 days supply.",
         },
     },
@@ -348,7 +351,194 @@ CASES: list[dict] = [
         },
         "extras": {
             "drug_alternates": ["norvasc"],
+            "quantity_calc": "Disp line on the Rx shows 90 tablets.",
             "days_calc": "90 tablets at 1 tablet per day = 90 days supply.",
+        },
+    },
+
+    # ---- Case 7: Liquid antibiotic for a child ----
+    {
+        "case_id": "rx_007",
+        "patient": {
+            "name": "Sam Childpatient",
+            "dob": "06/12/2019",
+            "mrn": "MRN-10007",
+            "address": "212 Pediatric Way, Sample City, TX 78000",
+            "allergies": ["NKDA"],
+        },
+        "prescriber": {
+            "name": "David Instructor, MD",
+            "npi": "0000000004",
+            "dea": "XT0000004",
+            "address": "720 Faculty Pkwy, Sample City, TX 78000",
+        },
+        "rx_text": {
+            "date_written": "05/19/2026",
+            "drug_line": "Amoxicillin 250 mg/5 mL suspension",
+            "sig_shorthand": "5 mL PO TID x 10 days",
+            "quantity_text": None,
+            "refills_text": "Refills: 0",
+            "daw_text": "DAW: 0",
+        },
+        "expected": {
+            "drug_name": "Amoxicillin",
+            "strength": "250 mg/5 mL",
+            "quantity": 150,
+            "days_supply": 10,
+            "refills": 0,
+            "daw": 0,
+            "sig_english": "Take 5 mL by mouth three times daily for 10 days",
+            "sig_components": {
+                "verb": VERB_TAKE,
+                "quantity": ["5 ml", "5ml", "five ml", "five milliliters"],
+                "route": ROUTE_PO,
+                "frequency": FREQ_TID,
+                "duration": ["10 days", "ten days"],
+            },
+        },
+        "extras": {
+            "drug_alternates": ["amoxil"],
+            "quantity_calc": "5 mL x 3 times/day x 10 days = 150 mL total.",
+            "days_calc": "Duration written on the Rx is 10 days.",
+        },
+    },
+
+    # ---- Case 8: Eye drops, twice daily ----
+    {
+        "case_id": "rx_008",
+        "patient": {
+            "name": "Margaret Trialperson",
+            "dob": "10/08/1945",
+            "mrn": "MRN-10008",
+            "address": "318 Reference Dr, Training Town, TX 78002",
+            "allergies": ["Aspirin"],
+        },
+        "prescriber": {
+            "name": "Sarah Mentor, DO",
+            "npi": "0000000003",
+            "dea": "XT0000003",
+            "address": "500 Education Ln, Training Town, TX 78002",
+        },
+        "rx_text": {
+            "date_written": "05/19/2026",
+            "drug_line": "Timolol 0.5% ophthalmic solution",
+            "sig_shorthand": "1 gtt OU BID",
+            "quantity_text": "Disp: 5 mL",
+            "refills_text": "Refills: 2",
+            "daw_text": "DAW: 0",
+        },
+        "expected": {
+            "drug_name": "Timolol",
+            "strength": "0.5%",
+            "quantity": 5,
+            "days_supply": 30,
+            "refills": 2,
+            "daw": 0,
+            "sig_english": "Instill 1 drop in both eyes twice daily",
+            "sig_components": {
+                "verb": ["instill", "place", "use"],
+                "quantity": ["1", "one"],
+                "form": ["drop", "drops"],
+                "route": ["in both eyes", "in each eye", "into both eyes"],
+                "frequency": FREQ_BID,
+            },
+        },
+        "extras": {
+            "drug_alternates": ["timoptic"],
+            "quantity_calc": "Disp line on the Rx shows 5 mL (one bottle).",
+            "days_calc": "A 5 mL bottle of eye drops typically lasts about 30 days at twice-daily dosing.",
+        },
+    },
+
+    # ---- Case 9: Topical cream, twice daily ----
+    {
+        "case_id": "rx_009",
+        "patient": {
+            "name": "Diego Sampleson",
+            "dob": "04/22/1990",
+            "mrn": "MRN-10009",
+            "address": "424 Practice Ave, Sample City, TX 78000",
+            "allergies": ["NKDA"],
+        },
+        "prescriber": {
+            "name": "Robert Coach, MD",
+            "npi": "0000000002",
+            "dea": "XT0000002",
+            "address": "300 Trainer Ave, Practice City, TX 78001",
+        },
+        "rx_text": {
+            "date_written": "05/19/2026",
+            "drug_line": "Hydrocortisone 1% cream",
+            "sig_shorthand": "Apply to affected area BID",
+            "quantity_text": "Disp: 30 g",
+            "refills_text": "Refills: 2",
+            "daw_text": "DAW: 0",
+        },
+        "expected": {
+            "drug_name": "Hydrocortisone",
+            "strength": "1%",
+            "quantity": 30,
+            "days_supply": 30,
+            "refills": 2,
+            "daw": 0,
+            "sig_english": "Apply to the affected area twice daily",
+            "sig_components": {
+                "verb": ["apply", "rub", "spread"],
+                "route": ["to affected area", "to the affected area", "topically", "to skin"],
+                "frequency": FREQ_BID,
+            },
+        },
+        "extras": {
+            "quantity_calc": "Disp line on the Rx shows 30 g (one tube).",
+            "days_calc": "Estimated 30 days for a 30 g tube of cream at twice-daily dosing.",
+        },
+    },
+
+    # ---- Case 10: PRN analgesic ----
+    {
+        "case_id": "rx_010",
+        "patient": {
+            "name": "Patricia Demofield",
+            "dob": "01/16/1978",
+            "mrn": "MRN-10010",
+            "address": "535 Mock St, Practice City, TX 78001",
+            "allergies": ["Penicillin"],
+        },
+        "prescriber": {
+            "name": "Jane Trainer, MD",
+            "npi": "0000000001",
+            "dea": "XT0000001",
+            "address": "200 Practice Blvd, Sample City, TX 78000",
+        },
+        "rx_text": {
+            "date_written": "05/19/2026",
+            "drug_line": "Ibuprofen 600 mg tablet",
+            "sig_shorthand": "1 tab PO Q6H PRN pain",
+            "quantity_text": "Disp: 30",
+            "refills_text": "Refills: 1",
+            "daw_text": "DAW: 0",
+        },
+        "expected": {
+            "drug_name": "Ibuprofen",
+            "strength": "600 mg",
+            "quantity": 30,
+            "days_supply": 7,
+            "refills": 1,
+            "daw": 0,
+            "sig_english": "Take 1 tablet by mouth every 6 hours as needed for pain",
+            "sig_components": {
+                "verb": VERB_TAKE,
+                "quantity": ["1", "one"],
+                "form": FORM_TABLET,
+                "route": ROUTE_PO,
+                "frequency": ["every 6 hours"],
+                "prn": ["as needed", "if needed", "when needed"],
+            },
+        },
+        "extras": {
+            "drug_alternates": ["motrin", "advil"],
+            "quantity_calc": "Disp line on the Rx shows 30 tablets.",
+            "days_calc": "30 tablets at maximum 4 doses per day = 7 days supply (PRN max).",
         },
     },
 ]
