@@ -84,8 +84,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Jane Trainer, MD",
-            "npi": "0000000001",
-            "dea": "XT0000001",
+            "npi": "1487523796",
+            "dea": "FT4287563",
             "address": "200 Practice Blvd, Sample City, TX 78000",
         },
         "rx_text": {
@@ -132,8 +132,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Robert Coach, MD",
-            "npi": "0000000002",
-            "dea": "XT0000002",
+            "npi": "1760395284",
+            "dea": "FC2950837",
             "address": "300 Trainer Ave, Practice City, TX 78001",
         },
         "rx_text": {
@@ -179,8 +179,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Sarah Mentor, DO",
-            "npi": "0000000003",
-            "dea": "XT0000003",
+            "npi": "1928461735",
+            "dea": "FM6182947",
             "address": "500 Education Ln, Training Town, TX 78002",
         },
         "rx_text": {
@@ -226,8 +226,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "David Instructor, MD",
-            "npi": "0000000004",
-            "dea": "XT0000004",
+            "npi": "1364297805",
+            "dea": "FI9374518",
             "address": "720 Faculty Pkwy, Sample City, TX 78000",
         },
         "rx_text": {
@@ -273,8 +273,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Jane Trainer, MD",
-            "npi": "0000000001",
-            "dea": "XT0000001",
+            "npi": "1487523796",
+            "dea": "FT4287563",
             "address": "200 Practice Blvd, Sample City, TX 78000",
         },
         "rx_text": {
@@ -321,8 +321,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Sarah Mentor, DO",
-            "npi": "0000000003",
-            "dea": "XT0000003",
+            "npi": "1928461735",
+            "dea": "FM6182947",
             "address": "500 Education Ln, Training Town, TX 78002",
         },
         "rx_text": {
@@ -368,8 +368,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "David Instructor, MD",
-            "npi": "0000000004",
-            "dea": "XT0000004",
+            "npi": "1364297805",
+            "dea": "FI9374518",
             "address": "720 Faculty Pkwy, Sample City, TX 78000",
         },
         "rx_text": {
@@ -415,8 +415,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Sarah Mentor, DO",
-            "npi": "0000000003",
-            "dea": "XT0000003",
+            "npi": "1928461735",
+            "dea": "FM6182947",
             "address": "500 Education Ln, Training Town, TX 78002",
         },
         "rx_text": {
@@ -462,8 +462,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Robert Coach, MD",
-            "npi": "0000000002",
-            "dea": "XT0000002",
+            "npi": "1760395284",
+            "dea": "FC2950837",
             "address": "300 Trainer Ave, Practice City, TX 78001",
         },
         "rx_text": {
@@ -506,8 +506,8 @@ CASES: list[dict] = [
         },
         "prescriber": {
             "name": "Jane Trainer, MD",
-            "npi": "0000000001",
-            "dea": "XT0000001",
+            "npi": "1487523796",
+            "dea": "FT4287563",
             "address": "200 Practice Blvd, Sample City, TX 78000",
         },
         "rx_text": {
