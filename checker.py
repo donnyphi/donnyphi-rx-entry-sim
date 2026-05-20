@@ -133,7 +133,13 @@ def check_days_supply(
 
 
 def check_refills(user: Any, expected: int) -> dict[str, Any]:
-    return _check_int_field(user, expected, "Refills")
+    result = _check_int_field(user, expected, "Refills")
+    if not result["correct"]:
+        base = result["explanation"] or f"Expected {expected}."
+        result["explanation"] = (
+            base + " The refill count is written on the prescription; copy it exactly."
+        )
+    return result
 
 
 def check_daw(user: Any, expected: int) -> dict[str, Any]:
