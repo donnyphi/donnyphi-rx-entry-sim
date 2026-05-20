@@ -61,66 +61,48 @@ INPUT_KEYS = [
 
 # =====================================================================
 # Drug Knowledge reference data
-# Keyed by lowercase generic name. Maps each drug to a small set of
-# training-reference fields. Not clinical guidance.
+# Keyed by lowercase generic name. High-yield list assembled from common
+# Top-200 pharmacy technician study conventions; not an official exam list
+# and not clinical guidance. Entries are kept alphabetical so Prev/Next
+# navigation in the Drug Knowledge section moves through them predictably.
 # =====================================================================
 
 DRUG_INFO: dict[str, dict] = {
-    "amoxicillin": {
-        "generic": "Amoxicillin",
-        "brand_examples": ["Amoxil"],
-        "dosage_forms": ["capsule", "tablet", "oral suspension", "chewable tablet"],
-        "category": "Aminopenicillin antibiotic. Training-use category: oral antibiotic.",
+    "acetaminophen": {
+        "generic": "Acetaminophen",
+        "brand_examples": ["Tylenol"],
+        "dosage_forms": ["tablet", "capsule", "oral suspension", "chewable tablet", "suppository"],
+        "category": "Non-opioid analgesic / antipyretic. Training-use category: pain and fever relief (non-NSAID).",
         "counseling": (
-            "Complete the full course as prescribed even if symptoms improve. "
-            "Take with or without food. Report rash or breathing difficulty immediately."
+            "Do not exceed 4 grams in 24 hours from all sources. Avoid combining "
+            "with alcohol due to liver toxicity risk. Check OTC cold and flu "
+            "products for hidden acetaminophen content."
         ),
-        "lasa": "Look-alike / sound-alike with amoxapine (an antidepressant) and ampicillin (another beta-lactam antibiotic).",
+        "lasa": "Look-alike / sound-alike with combination products like hydrocodone-acetaminophen and oxycodone-acetaminophen.",
     },
-    "lisinopril": {
-        "generic": "Lisinopril",
-        "brand_examples": ["Prinivil", "Zestril"],
-        "dosage_forms": ["tablet"],
-        "category": "ACE inhibitor. Training-use category: antihypertensive.",
+    "albuterol": {
+        "generic": "Albuterol",
+        "brand_examples": ["ProAir", "Ventolin", "Proventil"],
+        "dosage_forms": ["metered-dose inhaler", "nebulizer solution", "tablet", "syrup"],
+        "category": "Short-acting beta-2 agonist (SABA). Training-use category: rescue inhaler for asthma and COPD.",
         "counseling": (
-            "Take at the same time each day. Watch for a persistent dry cough or "
-            "swelling of the face / throat (angioedema) and report immediately. "
-            "Avoid potassium supplements unless directed."
+            "Use for sudden shortness of breath or wheezing, not for daily "
+            "maintenance. Shake the inhaler and prime as directed before each "
+            "use. Report needing more than two canisters per month."
         ),
-        "lasa": "Look-alike / sound-alike with fosinopril, enalapril, and other '-pril' ACE inhibitors.",
+        "lasa": "Look-alike / sound-alike with atenolol (a beta blocker) by spelling; verify the order carefully.",
     },
-    "metformin": {
-        "generic": "Metformin",
-        "brand_examples": ["Glucophage"],
-        "dosage_forms": ["tablet", "extended-release tablet", "oral solution"],
-        "category": "Biguanide. Training-use category: oral antidiabetic for type 2 diabetes.",
+    "alprazolam": {
+        "generic": "Alprazolam",
+        "brand_examples": ["Xanax"],
+        "dosage_forms": ["tablet", "extended-release tablet", "orally disintegrating tablet", "oral solution"],
+        "category": "Short-acting benzodiazepine. Schedule IV controlled substance. Training-use category: anxiety and panic disorder.",
         "counseling": (
-            "Take with meals to reduce GI upset. Hold the dose and call the prescriber "
-            "before any contrast imaging procedures (lactic acidosis risk)."
+            "Take only as prescribed. Avoid alcohol and other CNS depressants. "
+            "Do not stop abruptly after long-term use; taper under prescriber "
+            "direction to avoid withdrawal."
         ),
-        "lasa": "Look-alike / sound-alike with metoprolol (a beta blocker). Verify the spelling carefully.",
-    },
-    "atorvastatin": {
-        "generic": "Atorvastatin",
-        "brand_examples": ["Lipitor"],
-        "dosage_forms": ["tablet"],
-        "category": "HMG-CoA reductase inhibitor. Training-use category: statin (cholesterol lowering).",
-        "counseling": (
-            "Take at the same time each day. Report unexplained muscle pain, weakness, "
-            "or dark urine. Avoid large quantities of grapefruit juice."
-        ),
-        "lasa": "Look-alike / sound-alike with other statins: simvastatin, rosuvastatin, pravastatin.",
-    },
-    "ciprofloxacin": {
-        "generic": "Ciprofloxacin",
-        "brand_examples": ["Cipro"],
-        "dosage_forms": ["tablet", "oral suspension", "ophthalmic solution", "otic solution"],
-        "category": "Fluoroquinolone antibiotic. Training-use category: broad-spectrum oral antibiotic.",
-        "counseling": (
-            "Avoid taking with dairy, antacids, or iron / calcium / zinc supplements "
-            "(separate by at least 2 hours). Stay well hydrated. Report tendon pain."
-        ),
-        "lasa": "Look-alike / sound-alike with cephalexin and with other fluoroquinolones (levofloxacin, moxifloxacin).",
+        "lasa": "Look-alike / sound-alike with lorazepam and clonazepam (other benzodiazepines).",
     },
     "amlodipine": {
         "generic": "Amlodipine",
@@ -133,17 +115,145 @@ DRUG_INFO: dict[str, dict] = {
         ),
         "lasa": "Look-alike / sound-alike with amiloride (a diuretic) and amantadine (an antiviral).",
     },
-    "timolol": {
-        "generic": "Timolol",
-        "brand_examples": ["Timoptic"],
-        "dosage_forms": ["ophthalmic solution", "ophthalmic gel", "tablet"],
-        "category": "Non-selective beta blocker. Training-use category: ophthalmic glaucoma treatment.",
+    "amoxicillin": {
+        "generic": "Amoxicillin",
+        "brand_examples": ["Amoxil"],
+        "dosage_forms": ["capsule", "tablet", "oral suspension", "chewable tablet"],
+        "category": "Aminopenicillin antibiotic. Training-use category: oral antibiotic.",
         "counseling": (
-            "Press on the inside corner of the eye for 1 to 2 minutes after each drop "
-            "to reduce systemic absorption. Report breathing difficulty, slow heart "
-            "rate, or unusual fatigue."
+            "Complete the full course as prescribed even if symptoms improve. "
+            "Take with or without food. Report rash or breathing difficulty immediately."
         ),
-        "lasa": "Look-alike / sound-alike with atenolol and other '-olol' beta blockers.",
+        "lasa": "Look-alike / sound-alike with amoxapine (an antidepressant) and ampicillin (another beta-lactam antibiotic).",
+    },
+    "apixaban": {
+        "generic": "Apixaban",
+        "brand_examples": ["Eliquis"],
+        "dosage_forms": ["tablet"],
+        "category": "Direct-acting oral anticoagulant (DOAC), factor Xa inhibitor. Training-use category: oral anticoagulant.",
+        "counseling": (
+            "Take exactly as prescribed at the same times daily. Report any "
+            "unusual bleeding, bruising, dark stools, or blood in urine. Do not "
+            "stop without prescriber direction (clot risk)."
+        ),
+        "lasa": "Look-alike / sound-alike with other DOACs: rivaroxaban, dabigatran, edoxaban.",
+    },
+    "atorvastatin": {
+        "generic": "Atorvastatin",
+        "brand_examples": ["Lipitor"],
+        "dosage_forms": ["tablet"],
+        "category": "HMG-CoA reductase inhibitor. Training-use category: statin (cholesterol lowering).",
+        "counseling": (
+            "Take at the same time each day. Report unexplained muscle pain, "
+            "weakness, or dark urine. Avoid large quantities of grapefruit juice."
+        ),
+        "lasa": "Look-alike / sound-alike with other statins: simvastatin, rosuvastatin, pravastatin.",
+    },
+    "azithromycin": {
+        "generic": "Azithromycin",
+        "brand_examples": ["Zithromax", "Z-Pak"],
+        "dosage_forms": ["tablet", "oral suspension", "extended-release oral suspension", "intravenous"],
+        "category": "Macrolide antibiotic. Training-use category: oral antibiotic for respiratory and skin infections.",
+        "counseling": (
+            "Complete the full course as directed (often a 5-day Z-Pak). Can be "
+            "taken with or without food. Report severe diarrhea, hearing changes, "
+            "or irregular heartbeat."
+        ),
+        "lasa": "Look-alike / sound-alike with erythromycin and clarithromycin (other macrolides).",
+    },
+    "cephalexin": {
+        "generic": "Cephalexin",
+        "brand_examples": ["Keflex"],
+        "dosage_forms": ["capsule", "tablet", "oral suspension"],
+        "category": "First-generation cephalosporin antibiotic. Training-use category: oral antibiotic for skin and urinary tract infections.",
+        "counseling": (
+            "Complete the full course even if symptoms improve. Take with food "
+            "if stomach upset. Patients with penicillin allergy require pharmacist "
+            "evaluation due to possible cross-reactivity."
+        ),
+        "lasa": "Look-alike / sound-alike with cefazolin and other cephalosporins; confirm spelling vs ciprofloxacin (different class).",
+    },
+    "ciprofloxacin": {
+        "generic": "Ciprofloxacin",
+        "brand_examples": ["Cipro"],
+        "dosage_forms": ["tablet", "oral suspension", "ophthalmic solution", "otic solution"],
+        "category": "Fluoroquinolone antibiotic. Training-use category: broad-spectrum oral antibiotic.",
+        "counseling": (
+            "Avoid taking with dairy, antacids, or iron / calcium / zinc "
+            "supplements (separate by at least 2 hours). Stay well hydrated. "
+            "Report tendon pain."
+        ),
+        "lasa": "Look-alike / sound-alike with cephalexin and with other fluoroquinolones (levofloxacin, moxifloxacin).",
+    },
+    "clopidogrel": {
+        "generic": "Clopidogrel",
+        "brand_examples": ["Plavix"],
+        "dosage_forms": ["tablet"],
+        "category": "P2Y12 platelet inhibitor (antiplatelet). Training-use category: prevention of cardiovascular events after MI or stent placement.",
+        "counseling": (
+            "Take at the same time each day. Report unusual bruising or "
+            "bleeding. Do not stop without prescriber input, especially after "
+            "recent stent placement (high clot risk)."
+        ),
+        "lasa": "Look-alike / sound-alike with clobazam (an anticonvulsant) and clozapine.",
+    },
+    "escitalopram": {
+        "generic": "Escitalopram",
+        "brand_examples": ["Lexapro"],
+        "dosage_forms": ["tablet", "oral solution"],
+        "category": "Selective serotonin reuptake inhibitor (SSRI). Training-use category: depression and generalized anxiety.",
+        "counseling": (
+            "Effects build over 4 to 6 weeks. Do not stop abruptly. Report "
+            "worsening mood or suicidal thoughts immediately, especially in "
+            "the first weeks of therapy."
+        ),
+        "lasa": "Look-alike / sound-alike with citalopram (very similar names and class) and other SSRIs.",
+    },
+    "fluticasone-salmeterol": {
+        "generic": "Fluticasone / Salmeterol",
+        "brand_examples": ["Advair Diskus", "Advair HFA", "AirDuo"],
+        "dosage_forms": ["dry powder inhaler", "metered-dose inhaler"],
+        "category": "Inhaled corticosteroid (ICS) plus long-acting beta-2 agonist (LABA) combination. Training-use category: maintenance inhaler for asthma and COPD.",
+        "counseling": (
+            "Use daily for maintenance, not as a rescue inhaler. Rinse mouth "
+            "and spit after each dose to prevent oral thrush. Do not stop suddenly."
+        ),
+        "lasa": "Look-alike / sound-alike with budesonide-formoterol (Symbicort) and other ICS/LABA combinations.",
+    },
+    "gabapentin": {
+        "generic": "Gabapentin",
+        "brand_examples": ["Neurontin", "Gralise"],
+        "dosage_forms": ["capsule", "tablet", "oral solution"],
+        "category": "Gabapentinoid. Training-use category: neuropathic pain, partial seizures, postherpetic neuralgia.",
+        "counseling": (
+            "May cause drowsiness and dizziness, especially early in therapy. "
+            "Do not stop abruptly. Adjust dosing if kidney function is reduced "
+            "(renal dose adjustment is common)."
+        ),
+        "lasa": "Look-alike / sound-alike with pregabalin (Lyrica, similar drug class).",
+    },
+    "glipizide": {
+        "generic": "Glipizide",
+        "brand_examples": ["Glucotrol", "Glucotrol XL"],
+        "dosage_forms": ["tablet", "extended-release tablet"],
+        "category": "Sulfonylurea. Training-use category: oral antidiabetic for type 2 diabetes.",
+        "counseling": (
+            "Take 30 minutes before breakfast. Watch for hypoglycemia signs "
+            "(shakiness, sweating, confusion). Carry a fast-acting sugar source."
+        ),
+        "lasa": "Look-alike / sound-alike with glyburide and glimepiride (other sulfonylureas).",
+    },
+    "hydrochlorothiazide": {
+        "generic": "Hydrochlorothiazide",
+        "brand_examples": ["Microzide"],
+        "dosage_forms": ["tablet", "capsule"],
+        "category": "Thiazide diuretic. Training-use category: antihypertensive and edema management.",
+        "counseling": (
+            "Take in the morning to avoid nighttime urination. Use sunscreen "
+            "due to photosensitivity. Watch for potassium loss; report muscle "
+            "cramps or weakness."
+        ),
+        "lasa": "Look-alike / sound-alike with hydrocortisone (often abbreviated HCTZ vs HC). High-risk medication-error pair.",
     },
     "hydrocortisone": {
         "generic": "Hydrocortisone",
@@ -151,8 +261,9 @@ DRUG_INFO: dict[str, dict] = {
         "dosage_forms": ["cream", "ointment", "lotion", "oral tablet", "injection"],
         "category": "Low-potency topical corticosteroid. Training-use category: topical anti-inflammatory.",
         "counseling": (
-            "Apply a thin layer to the affected area only. Avoid use on broken skin "
-            "or near the eyes unless directed. Limit duration to prevent skin thinning."
+            "Apply a thin layer to the affected area only. Avoid use on broken "
+            "skin or near the eyes unless directed. Limit duration to prevent "
+            "skin thinning."
         ),
         "lasa": "Look-alike / sound-alike with hydrochlorothiazide (a diuretic, often abbreviated HCTZ).",
     },
@@ -162,11 +273,203 @@ DRUG_INFO: dict[str, dict] = {
         "dosage_forms": ["tablet", "capsule", "oral suspension", "chewable tablet"],
         "category": "Non-selective NSAID. Training-use category: analgesic / antipyretic / anti-inflammatory.",
         "counseling": (
-            "Take with food or milk to reduce GI upset. Stay well hydrated. Report GI "
-            "bleeding signs (black stools, vomiting blood) or unexplained swelling. "
-            "Avoid in late pregnancy and in patients on anticoagulants without prescriber approval."
+            "Take with food or milk to reduce GI upset. Stay well hydrated. "
+            "Report GI bleeding signs (black stools, vomiting blood) or "
+            "unexplained swelling. Avoid in late pregnancy and in patients on "
+            "anticoagulants without prescriber approval."
         ),
         "lasa": "Look-alike / sound-alike with naproxen (a similar NSAID).",
+    },
+    "insulin glargine": {
+        "generic": "Insulin Glargine",
+        "brand_examples": ["Lantus", "Basaglar", "Toujeo"],
+        "dosage_forms": ["prefilled pen", "vial"],
+        "category": "Long-acting basal insulin analog. Training-use category: basal insulin for type 1 and type 2 diabetes.",
+        "counseling": (
+            "Inject once daily at the same time each day, usually bedtime. "
+            "Rotate injection sites. Do not mix in the same syringe with other "
+            "insulins."
+        ),
+        "lasa": "Look-alike / sound-alike with insulin detemir (Levemir) and insulin lispro (Humalog, a rapid-acting). Insulin name and concentration errors are high-risk.",
+    },
+    "latanoprost": {
+        "generic": "Latanoprost",
+        "brand_examples": ["Xalatan"],
+        "dosage_forms": ["ophthalmic solution"],
+        "category": "Prostaglandin analog. Training-use category: ophthalmic - reduces intraocular pressure in glaucoma.",
+        "counseling": (
+            "Use once daily in the evening. May darken iris color and increase "
+            "eyelash growth over time. Press on the inside corner of the eye "
+            "for 1 to 2 minutes after instilling."
+        ),
+        "lasa": "Look-alike / sound-alike with other prostaglandin analogs (bimatoprost, travoprost).",
+    },
+    "levothyroxine": {
+        "generic": "Levothyroxine",
+        "brand_examples": ["Synthroid", "Levoxyl", "Tirosint"],
+        "dosage_forms": ["tablet", "capsule", "oral solution", "injection"],
+        "category": "Synthetic thyroid hormone (T4). Training-use category: hypothyroidism replacement therapy.",
+        "counseling": (
+            "Take on an empty stomach 30 to 60 minutes before breakfast. "
+            "Separate from calcium, iron, and antacids by at least 4 hours. "
+            "Do not switch between brand and generic without prescriber awareness."
+        ),
+        "lasa": "Look-alike / sound-alike with liothyronine (T3) and combination thyroid products. Different strengths look very similar.",
+    },
+    "lisinopril": {
+        "generic": "Lisinopril",
+        "brand_examples": ["Prinivil", "Zestril"],
+        "dosage_forms": ["tablet"],
+        "category": "ACE inhibitor. Training-use category: antihypertensive.",
+        "counseling": (
+            "Take at the same time each day. Watch for a persistent dry cough "
+            "or swelling of the face / throat (angioedema) and report "
+            "immediately. Avoid potassium supplements unless directed."
+        ),
+        "lasa": "Look-alike / sound-alike with fosinopril, enalapril, and other '-pril' ACE inhibitors.",
+    },
+    "losartan": {
+        "generic": "Losartan",
+        "brand_examples": ["Cozaar"],
+        "dosage_forms": ["tablet"],
+        "category": "Angiotensin II receptor blocker (ARB). Training-use category: antihypertensive, often used in patients who cannot tolerate ACE inhibitors.",
+        "counseling": (
+            "Take at the same time each day. Report swelling of the face, "
+            "lips, or tongue immediately. Avoid potassium supplements unless "
+            "directed."
+        ),
+        "lasa": "Look-alike / sound-alike with valsartan, irbesartan, and other ARBs ending in '-sartan'.",
+    },
+    "metformin": {
+        "generic": "Metformin",
+        "brand_examples": ["Glucophage"],
+        "dosage_forms": ["tablet", "extended-release tablet", "oral solution"],
+        "category": "Biguanide. Training-use category: oral antidiabetic for type 2 diabetes.",
+        "counseling": (
+            "Take with meals to reduce GI upset. Hold the dose and call the "
+            "prescriber before any contrast imaging procedures (lactic "
+            "acidosis risk)."
+        ),
+        "lasa": "Look-alike / sound-alike with metoprolol (a beta blocker). Verify the spelling carefully.",
+    },
+    "metoprolol": {
+        "generic": "Metoprolol",
+        "brand_examples": ["Lopressor (tartrate)", "Toprol-XL (succinate)"],
+        "dosage_forms": ["tablet", "extended-release tablet", "injection"],
+        "category": "Cardioselective beta-1 blocker. Training-use category: antihypertensive, heart failure, post-MI care.",
+        "counseling": (
+            "Take with or immediately after meals. Do not stop abruptly "
+            "(rebound hypertension and angina risk). Tartrate and succinate "
+            "forms are NOT interchangeable."
+        ),
+        "lasa": "Look-alike / sound-alike with metformin (very common error pair) and misoprostol. Tartrate vs succinate confusion is also high-risk.",
+    },
+    "naproxen": {
+        "generic": "Naproxen",
+        "brand_examples": ["Aleve", "Naprosyn"],
+        "dosage_forms": ["tablet", "capsule", "oral suspension", "delayed-release tablet"],
+        "category": "Non-selective NSAID. Training-use category: pain, inflammation, fever.",
+        "counseling": (
+            "Take with food or milk to reduce GI upset. Use the lowest "
+            "effective dose. Watch for stomach pain, dark stools, or unusual "
+            "swelling. Avoid in late pregnancy."
+        ),
+        "lasa": "Look-alike / sound-alike with naloxone (an opioid reversal agent). Very different drugs despite similar starts.",
+    },
+    "omeprazole": {
+        "generic": "Omeprazole",
+        "brand_examples": ["Prilosec"],
+        "dosage_forms": ["delayed-release capsule", "delayed-release tablet", "oral suspension"],
+        "category": "Proton pump inhibitor (PPI). Training-use category: GERD, peptic ulcer disease, hyperacidity.",
+        "counseling": (
+            "Take 30 to 60 minutes before the first meal of the day. Do not "
+            "crush or chew delayed-release forms. Long-term use is associated "
+            "with bone fracture and B12 deficiency risk."
+        ),
+        "lasa": "Look-alike / sound-alike with other PPIs (pantoprazole, lansoprazole, esomeprazole) and ondansetron (similar starting letters).",
+    },
+    "pantoprazole": {
+        "generic": "Pantoprazole",
+        "brand_examples": ["Protonix"],
+        "dosage_forms": ["delayed-release tablet", "delayed-release oral suspension", "intravenous"],
+        "category": "Proton pump inhibitor (PPI). Training-use category: GERD, erosive esophagitis, hospital ulcer prophylaxis.",
+        "counseling": (
+            "Take 30 minutes before a meal. Swallow tablets whole; do not "
+            "split or crush. Report severe diarrhea (C. difficile risk with "
+            "long-term use)."
+        ),
+        "lasa": "Look-alike / sound-alike with other PPIs (omeprazole, esomeprazole, lansoprazole).",
+    },
+    "sertraline": {
+        "generic": "Sertraline",
+        "brand_examples": ["Zoloft"],
+        "dosage_forms": ["tablet", "oral concentrate (solution)"],
+        "category": "Selective serotonin reuptake inhibitor (SSRI). Training-use category: depression, anxiety, PTSD, OCD.",
+        "counseling": (
+            "Take with food to improve absorption. Therapeutic effects take "
+            "4 to 6 weeks. Do not stop abruptly. Report new agitation or "
+            "suicidal thoughts, especially in the first weeks."
+        ),
+        "lasa": "Look-alike / sound-alike with other SSRIs and with cetirizine by spelling.",
+    },
+    "simvastatin": {
+        "generic": "Simvastatin",
+        "brand_examples": ["Zocor"],
+        "dosage_forms": ["tablet"],
+        "category": "HMG-CoA reductase inhibitor. Training-use category: statin (cholesterol lowering).",
+        "counseling": (
+            "Take in the evening. Avoid grapefruit juice. Report unexplained "
+            "muscle pain or weakness, dark urine, or fatigue."
+        ),
+        "lasa": "Look-alike / sound-alike with other statins (atorvastatin, rosuvastatin, pravastatin). The 80 mg dose has specific safety restrictions.",
+    },
+    "timolol": {
+        "generic": "Timolol",
+        "brand_examples": ["Timoptic"],
+        "dosage_forms": ["ophthalmic solution", "ophthalmic gel", "tablet"],
+        "category": "Non-selective beta blocker. Training-use category: ophthalmic glaucoma treatment.",
+        "counseling": (
+            "Press on the inside corner of the eye for 1 to 2 minutes after "
+            "each drop to reduce systemic absorption. Report breathing "
+            "difficulty, slow heart rate, or unusual fatigue."
+        ),
+        "lasa": "Look-alike / sound-alike with atenolol and other '-olol' beta blockers.",
+    },
+    "tramadol": {
+        "generic": "Tramadol",
+        "brand_examples": ["Ultram"],
+        "dosage_forms": ["tablet", "extended-release tablet", "extended-release capsule"],
+        "category": "Centrally acting opioid analgesic. Schedule IV controlled substance. Training-use category: moderate pain.",
+        "counseling": (
+            "Risk of dependence and seizures, particularly at high doses or "
+            "when combined with antidepressants. Avoid alcohol. Do not stop "
+            "abruptly after long-term use."
+        ),
+        "lasa": "Look-alike / sound-alike with trazodone (an antidepressant, NOT an opioid). Very common dispensing error.",
+    },
+    "triamcinolone": {
+        "generic": "Triamcinolone Acetonide",
+        "brand_examples": ["Kenalog", "Aristocort"],
+        "dosage_forms": ["cream", "ointment", "lotion", "dental paste", "nasal spray", "injection"],
+        "category": "Medium-potency topical corticosteroid (varies by formulation). Training-use category: topical anti-inflammatory.",
+        "counseling": (
+            "Apply a thin layer to clean, dry skin. Do not use on the face, "
+            "groin, or under occlusive dressings unless directed. Avoid "
+            "prolonged use to prevent skin thinning."
+        ),
+        "lasa": "Look-alike / sound-alike with hydrocortisone and other topical steroids. Strength categories (low, medium, high potency) are easy to confuse.",
+    },
+    "warfarin": {
+        "generic": "Warfarin",
+        "brand_examples": ["Coumadin", "Jantoven"],
+        "dosage_forms": ["tablet"],
+        "category": "Vitamin K antagonist anticoagulant. Training-use category: oral anticoagulant requiring routine INR monitoring.",
+        "counseling": (
+            "Keep vitamin K intake (leafy greens) consistent. Many drug and "
+            "food interactions; check with the pharmacist before starting new "
+            "medications. Report unusual bleeding or bruising."
+        ),
+        "lasa": "Look-alike / sound-alike with other anticoagulants. Strength tablets are color-coded; verify color matches strength on every fill.",
     },
 }
 
@@ -2506,6 +2809,10 @@ def render_prescription_entry_section() -> None:
 
     # Row 2: patient + prescriber
     render_patient_prescriber(case)
+    st.caption(
+        "All prescriber identifiers (NPI / DEA) are fictional and used "
+        "for training only."
+    )
 
     # Row 3: entry form
     submitted_answers = render_entry_form()
@@ -2536,6 +2843,10 @@ def render_prescription_entry_section() -> None:
     # Missed-fields panel (only when populated)
     render_missed_fields_panel()
 
+    # Footer with Start New Session button - lives at the bottom of
+    # Prescription Entry only, not on other sections.
+    render_footer()
+
 
 # =====================================================================
 # Section: Drug Knowledge
@@ -2548,6 +2859,11 @@ def render_drug_knowledge_section() -> None:
 
     drug_knowledge_index is independent of current_case after the first
     initialization; navigation here does not affect Prescription Entry.
+
+    Layout order (as of this revision): disclaimer banner, then the drug
+    reference card, then the Prev / progress / Next navigation row at
+    the bottom. Reading first, then advancing, matches how users actually
+    use the section.
     """
     keys = list(DRUG_INFO.keys())
     n = len(keys)
@@ -2555,38 +2871,15 @@ def render_drug_knowledge_section() -> None:
     drug_key = keys[current]
     info = DRUG_INFO[drug_key]
 
+    # ---- Disclaimer banner ----
     st.markdown(
         '<div class="info-disclaimer">'
-        '<strong>Training reference only</strong> &middot; not clinical guidance.'
+        '<strong>Training reference only</strong> &middot; not clinical guidance. '
+        'High-yield list based on common pharmacy technician study patterns; '
+        'not an official exam list.'
         '</div>',
         unsafe_allow_html=True,
     )
-
-    # ---- Prev / progress / Next navigation row ----
-    col_prev, col_progress, col_next = st.columns([1.5, 3, 1.5])
-    with col_prev:
-        if st.button(
-            "\u2190 Previous Drug",
-            use_container_width=True,
-            key="drug_kb_prev",
-        ):
-            st.session_state.drug_knowledge_index = (current - 1) % n
-            st.rerun()
-    with col_progress:
-        st.markdown(
-            f'<div class="drug-progress">'
-            f'Drug {current + 1} of {n} &middot; {html.escape(info["generic"])}'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-    with col_next:
-        if st.button(
-            "Next Drug \u2192",
-            use_container_width=True,
-            key="drug_kb_next",
-        ):
-            st.session_state.drug_knowledge_index = (current + 1) % n
-            st.rerun()
 
     # ---- Drug reference card ----
     with st.container(border=True):
@@ -2644,6 +2937,32 @@ def render_drug_knowledge_section() -> None:
             f'<div class="lasa-warning">{html.escape(info["lasa"])}</div>',
             unsafe_allow_html=True,
         )
+
+    # ---- Prev / progress / Next navigation row (below the card) ----
+    col_prev, col_progress, col_next = st.columns([1.5, 3, 1.5])
+    with col_prev:
+        if st.button(
+            "\u2190 Previous Drug",
+            use_container_width=True,
+            key="drug_kb_prev",
+        ):
+            st.session_state.drug_knowledge_index = (current - 1) % n
+            st.rerun()
+    with col_progress:
+        st.markdown(
+            f'<div class="drug-progress">'
+            f'Drug {current + 1} of {n} &middot; {html.escape(info["generic"])}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    with col_next:
+        if st.button(
+            "Next Drug \u2192",
+            use_container_width=True,
+            key="drug_kb_next",
+        ):
+            st.session_state.drug_knowledge_index = (current + 1) % n
+            st.rerun()
 
 
 # =====================================================================
@@ -2845,11 +3164,10 @@ def main() -> None:
     elif active == "Workflow Scenarios":
         render_workflow_scenarios_section()
     else:
-        # Default and "Prescription Entry" - the main simulator
+        # Default and "Prescription Entry" - the main simulator.
+        # This section renders its own footer (Start New Session) at the
+        # bottom; other sections deliberately do not show that button.
         render_prescription_entry_section()
-
-    # ---- Footer (always shown) ----
-    render_footer()
 
 
 if __name__ == "__main__":
