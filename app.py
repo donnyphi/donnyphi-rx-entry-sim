@@ -60,6 +60,250 @@ INPUT_KEYS = [
 
 
 # =====================================================================
+# Drug Knowledge reference data
+# Keyed by lowercase generic name. Maps each drug to a small set of
+# training-reference fields. Not clinical guidance.
+# =====================================================================
+
+DRUG_INFO: dict[str, dict] = {
+    "amoxicillin": {
+        "generic": "Amoxicillin",
+        "brand_examples": ["Amoxil"],
+        "dosage_forms": ["capsule", "tablet", "oral suspension", "chewable tablet"],
+        "category": "Aminopenicillin antibiotic. Training-use category: oral antibiotic.",
+        "counseling": (
+            "Complete the full course as prescribed even if symptoms improve. "
+            "Take with or without food. Report rash or breathing difficulty immediately."
+        ),
+        "lasa": "Look-alike / sound-alike with amoxapine (an antidepressant) and ampicillin (another beta-lactam antibiotic).",
+    },
+    "lisinopril": {
+        "generic": "Lisinopril",
+        "brand_examples": ["Prinivil", "Zestril"],
+        "dosage_forms": ["tablet"],
+        "category": "ACE inhibitor. Training-use category: antihypertensive.",
+        "counseling": (
+            "Take at the same time each day. Watch for a persistent dry cough or "
+            "swelling of the face / throat (angioedema) and report immediately. "
+            "Avoid potassium supplements unless directed."
+        ),
+        "lasa": "Look-alike / sound-alike with fosinopril, enalapril, and other '-pril' ACE inhibitors.",
+    },
+    "metformin": {
+        "generic": "Metformin",
+        "brand_examples": ["Glucophage"],
+        "dosage_forms": ["tablet", "extended-release tablet", "oral solution"],
+        "category": "Biguanide. Training-use category: oral antidiabetic for type 2 diabetes.",
+        "counseling": (
+            "Take with meals to reduce GI upset. Hold the dose and call the prescriber "
+            "before any contrast imaging procedures (lactic acidosis risk)."
+        ),
+        "lasa": "Look-alike / sound-alike with metoprolol (a beta blocker). Verify the spelling carefully.",
+    },
+    "atorvastatin": {
+        "generic": "Atorvastatin",
+        "brand_examples": ["Lipitor"],
+        "dosage_forms": ["tablet"],
+        "category": "HMG-CoA reductase inhibitor. Training-use category: statin (cholesterol lowering).",
+        "counseling": (
+            "Take at the same time each day. Report unexplained muscle pain, weakness, "
+            "or dark urine. Avoid large quantities of grapefruit juice."
+        ),
+        "lasa": "Look-alike / sound-alike with other statins: simvastatin, rosuvastatin, pravastatin.",
+    },
+    "ciprofloxacin": {
+        "generic": "Ciprofloxacin",
+        "brand_examples": ["Cipro"],
+        "dosage_forms": ["tablet", "oral suspension", "ophthalmic solution", "otic solution"],
+        "category": "Fluoroquinolone antibiotic. Training-use category: broad-spectrum oral antibiotic.",
+        "counseling": (
+            "Avoid taking with dairy, antacids, or iron / calcium / zinc supplements "
+            "(separate by at least 2 hours). Stay well hydrated. Report tendon pain."
+        ),
+        "lasa": "Look-alike / sound-alike with cephalexin and with other fluoroquinolones (levofloxacin, moxifloxacin).",
+    },
+    "amlodipine": {
+        "generic": "Amlodipine",
+        "brand_examples": ["Norvasc"],
+        "dosage_forms": ["tablet"],
+        "category": "Dihydropyridine calcium channel blocker. Training-use category: antihypertensive.",
+        "counseling": (
+            "A common side effect is ankle or foot swelling (peripheral edema). "
+            "Take at the same time each day. Do not stop abruptly without prescriber input."
+        ),
+        "lasa": "Look-alike / sound-alike with amiloride (a diuretic) and amantadine (an antiviral).",
+    },
+    "timolol": {
+        "generic": "Timolol",
+        "brand_examples": ["Timoptic"],
+        "dosage_forms": ["ophthalmic solution", "ophthalmic gel", "tablet"],
+        "category": "Non-selective beta blocker. Training-use category: ophthalmic glaucoma treatment.",
+        "counseling": (
+            "Press on the inside corner of the eye for 1 to 2 minutes after each drop "
+            "to reduce systemic absorption. Report breathing difficulty, slow heart "
+            "rate, or unusual fatigue."
+        ),
+        "lasa": "Look-alike / sound-alike with atenolol and other '-olol' beta blockers.",
+    },
+    "hydrocortisone": {
+        "generic": "Hydrocortisone",
+        "brand_examples": ["Cortizone-10", "Cortaid"],
+        "dosage_forms": ["cream", "ointment", "lotion", "oral tablet", "injection"],
+        "category": "Low-potency topical corticosteroid. Training-use category: topical anti-inflammatory.",
+        "counseling": (
+            "Apply a thin layer to the affected area only. Avoid use on broken skin "
+            "or near the eyes unless directed. Limit duration to prevent skin thinning."
+        ),
+        "lasa": "Look-alike / sound-alike with hydrochlorothiazide (a diuretic, often abbreviated HCTZ).",
+    },
+    "ibuprofen": {
+        "generic": "Ibuprofen",
+        "brand_examples": ["Motrin", "Advil"],
+        "dosage_forms": ["tablet", "capsule", "oral suspension", "chewable tablet"],
+        "category": "Non-selective NSAID. Training-use category: analgesic / antipyretic / anti-inflammatory.",
+        "counseling": (
+            "Take with food or milk to reduce GI upset. Stay well hydrated. Report GI "
+            "bleeding signs (black stools, vomiting blood) or unexplained swelling. "
+            "Avoid in late pregnancy and in patients on anticoagulants without prescriber approval."
+        ),
+        "lasa": "Look-alike / sound-alike with naproxen (a similar NSAID).",
+    },
+}
+
+
+# =====================================================================
+# Workflow Scenarios - fictional pharmacy workflow decisions
+# Each scenario presents a situation, 3-4 actions, a best action index,
+# and an explanation of the best action.
+# =====================================================================
+
+SCENARIOS: list[dict] = [
+    {
+        "id": "refill_too_soon",
+        "title": "Refill Too Soon",
+        "situation": (
+            "A fictional patient drops off a refill request for amlodipine 5 mg tablet "
+            "(90-day supply, quantity 90). The pharmacy system shows the previous fill "
+            "was 28 days ago and the plan requires 75% of the prior supply to be "
+            "consumed before authorizing another fill."
+        ),
+        "options": [
+            "Process the refill anyway since the patient asked nicely.",
+            "Inform the patient the plan considers this refill too soon and provide the next eligible refill date.",
+            "Submit the claim through insurance and let the rejection sort itself out.",
+            "Bill the patient out of pocket for the full retail price without offering other options.",
+        ],
+        "best_index": 1,
+        "explanation": (
+            "Most plans enforce a 75 to 80 percent rule for chronic medications. "
+            "Submitting an early claim typically returns NCPDP code 79 (refill too "
+            "soon). The standard workflow is to inform the patient of the next "
+            "eligible date so they can plan ahead. Cash pricing is an option only "
+            "if the patient requests it after being informed of the timing rule."
+        ),
+    },
+    {
+        "id": "allergy_warning",
+        "title": "Allergy Warning",
+        "situation": (
+            "A new fictional prescription arrives for cephalexin 500 mg capsule for a "
+            "patient whose profile shows a documented penicillin allergy reported as "
+            "'rash.' The pharmacy system flags a cross-reactivity warning."
+        ),
+        "options": [
+            "Fill the prescription without alerting anyone since rash is mild.",
+            "Refuse to fill and tell the patient to go to another pharmacy.",
+            "Alert the pharmacist for clinical review of the cephalosporin allergy cross-reactivity.",
+            "Remove the allergy entry from the patient's profile since the patient probably outgrew it.",
+        ],
+        "best_index": 2,
+        "explanation": (
+            "Pharmacy technicians are not authorized to dismiss allergy alerts or "
+            "modify allergy records. Cephalosporins share a beta-lactam ring with "
+            "penicillins, so cross-reactivity is possible (estimated 1 to 2 percent "
+            "in confirmed penicillin allergy). The pharmacist evaluates the allergy "
+            "history and severity before deciding whether to fill, contact the "
+            "prescriber, or counsel the patient on the risk."
+        ),
+    },
+    {
+        "id": "prescriber_clarification",
+        "title": "Prescriber Clarification",
+        "situation": (
+            "A handwritten fictional prescription comes in. The drug is clearly "
+            "lisinopril but the strength is illegible. It could be 10 mg or 40 mg. "
+            "The directions read 'Take 1 tablet by mouth once daily.'"
+        ),
+        "options": [
+            "Pick 10 mg since it is a common starting dose.",
+            "Call the prescriber's office to clarify the strength before filling.",
+            "Fill with whatever strength is most commonly stocked in your pharmacy.",
+            "Ask the patient what strength they were told to take.",
+        ],
+        "best_index": 1,
+        "explanation": (
+            "Strength is a critical prescription field. Lisinopril is available in "
+            "multiple strengths (2.5 mg through 40 mg) and the wrong strength can "
+            "cause hypotension or undertreated hypertension. Patients sometimes do "
+            "not know their exact doses. Always contact the prescriber to confirm "
+            "illegible or ambiguous fields, and document the clarification with the "
+            "name of the staff member you spoke with, the date, and the time."
+        ),
+    },
+    {
+        "id": "dur_warning",
+        "title": "DUR Warning",
+        "situation": (
+            "A fictional prescription for ibuprofen 600 mg twice daily as needed for "
+            "pain comes in. The patient's profile shows they were dispensed warfarin "
+            "(an anticoagulant) two weeks ago. The Drug Utilization Review system "
+            "flags a major drug-drug interaction."
+        ),
+        "options": [
+            "Dispense the ibuprofen and verbally remind the patient to be careful.",
+            "Ignore the warning since DUR alerts fire on many prescriptions.",
+            "Alert the pharmacist to review the bleeding-risk interaction with the prescriber.",
+            "Cancel the prescription unilaterally and tell the patient it was unsafe.",
+        ],
+        "best_index": 2,
+        "explanation": (
+            "Ibuprofen plus warfarin significantly raises bleeding risk (NSAID plus "
+            "anticoagulant). Major DUR alerts require pharmacist review. The "
+            "pharmacist may recommend an alternative (commonly acetaminophen), "
+            "confirm the prescriber is aware of both medications, or counsel the "
+            "patient on signs of bleeding. Technicians escalate alerts but do not "
+            "cancel prescriptions on their own authority."
+        ),
+    },
+    {
+        "id": "insurance_rejection",
+        "title": "Insurance Rejection",
+        "situation": (
+            "A claim for atorvastatin 20 mg returns from insurance with rejection "
+            "code 75 (Prior Authorization Required). The fictional patient is at the "
+            "counter waiting to pick up."
+        ),
+        "options": [
+            "Tell the patient the prescription is denied and to come back later.",
+            "Process it as cash and quote the full retail price without other options.",
+            "Inform the patient of the PA requirement, offer to start the PA with the prescriber, and explain expected timing.",
+            "Override the rejection in the pharmacy software.",
+        ],
+        "best_index": 2,
+        "explanation": (
+            "Prior authorization rejections are common for non-preferred drugs. The "
+            "standard workflow is to inform the patient of the PA requirement, "
+            "contact the prescriber's office to initiate the PA (typically 24 to 72 "
+            "hours), and offer alternatives such as a partial supply to bridge the "
+            "wait, a generic substitution if available, or a formulary alternative. "
+            "Do not dismiss the patient or default to cash pricing without offering "
+            "the PA pathway first."
+        ),
+    },
+]
+
+
+# =====================================================================
 # Custom CSS - pharmacy workstation look
 # =====================================================================
 
@@ -838,6 +1082,136 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
         background: white !important;
     }
 }
+/* ---------- Top navigation (st.radio horizontal) ---------- */
+.top-nav-divider {
+    border-bottom: 1px solid #e5e7eb;
+    margin: 4px 0 18px 0;
+}
+
+/* ---------- Training disclaimer banner ---------- */
+.info-disclaimer {
+    background: #f0f9ff;
+    border-left: 3px solid #0369a1;
+    padding: 8px 14px;
+    margin: 0 0 16px 0;
+    font-size: 0.84rem;
+    color: #075985;
+    border-radius: 4px;
+    line-height: 1.5;
+}
+
+.info-disclaimer strong {
+    color: #0c4a6e;
+}
+
+/* ---------- Drug Knowledge section ---------- */
+.drug-info-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 4px 0 4px 0;
+}
+
+.drug-info-category {
+    font-size: 0.92rem;
+    color: #4b5563;
+    margin-bottom: 14px;
+    font-style: italic;
+}
+
+.drug-info-section-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6b7280;
+    margin-top: 14px;
+    margin-bottom: 6px;
+}
+
+.drug-info-body {
+    font-size: 0.92rem;
+    color: #374151;
+    line-height: 1.55;
+}
+
+.drug-info-pill {
+    display: inline-block;
+    background: #f3f4f6;
+    color: #374151;
+    padding: 3px 11px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    margin: 2px 6px 2px 0;
+    border: 1px solid #e5e7eb;
+}
+
+.lasa-warning {
+    background: #fef3c7;
+    border-left: 3px solid #f59e0b;
+    padding: 8px 14px;
+    margin-top: 6px;
+    font-size: 0.88rem;
+    color: #78350f;
+    border-radius: 4px;
+    line-height: 1.5;
+}
+
+/* ---------- Workflow Scenarios section ---------- */
+.scenario-situation {
+    font-size: 0.94rem;
+    color: #1f2937;
+    line-height: 1.55;
+    background: #f9fafb;
+    border-left: 3px solid #0f766e;
+    padding: 12px 16px;
+    margin: 10px 0 6px 0;
+    border-radius: 4px;
+}
+
+.scenario-feedback-correct {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-top: 16px;
+}
+
+.scenario-feedback-incorrect {
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-top: 16px;
+}
+
+.scenario-feedback-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.scenario-feedback-correct .scenario-feedback-title {
+    color: #047857;
+}
+
+.scenario-feedback-incorrect .scenario-feedback-title {
+    color: #92400e;
+}
+
+.scenario-feedback-body {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #374151;
+}
+
+.scenario-user-pick {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin-top: 10px;
+    font-style: italic;
+}
+
 </style>
 """
 
@@ -868,6 +1242,14 @@ def init_state() -> None:
         st.session_state.sig_help_open = False
     if "example_mode" not in st.session_state:
         st.session_state.example_mode = False
+    if "active_section" not in st.session_state:
+        st.session_state.active_section = "Prescription Entry"
+    if "scenario_id" not in st.session_state:
+        st.session_state.scenario_id = SCENARIOS[0]["id"]
+    if "scenario_submitted" not in st.session_state:
+        st.session_state.scenario_submitted = False
+    if "scenario_choice" not in st.session_state:
+        st.session_state.scenario_choice = None
 
 
 def advance_case() -> None:
@@ -1937,25 +2319,34 @@ def render_footer() -> None:
 
 
 # =====================================================================
-# Main
+# Top navigation
 # =====================================================================
 
-def main() -> None:
-    st.set_page_config(
-        page_title="Rx Entry Simulator",
-        page_icon=None,
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )
-    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+def render_top_nav() -> None:
+    """Render a horizontal radio bound directly to session_state.active_section.
 
-    init_state()
+    Streamlit's radio with `key="active_section"` updates the session key
+    automatically when the user clicks - no callback or st.rerun() needed.
+    """
+    st.radio(
+        "Top navigation",
+        options=["Prescription Entry", "Drug Knowledge", "Workflow Scenarios"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="active_section",
+    )
+    st.markdown('<div class="top-nav-divider"></div>', unsafe_allow_html=True)
+
+
+# =====================================================================
+# Section: Prescription Entry
+# Wraps the existing simulator workflow. No logic change.
+# =====================================================================
+
+def render_prescription_entry_section() -> None:
+    """The prescription-entry simulator workflow (was the body of main)."""
     case = st.session_state.current_case
 
-    # ---- Top: header with title and stat chips ----
-    render_header()
-
-    # Workflow hint just below the header
     st.markdown(
         '<div class="workflow-hint">'
         'Read the prescription, enter the required fields, then check your entry.'
@@ -1963,17 +2354,16 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    # ---- Workspace ----
-    # Row 1: prescription across the top (the source document)
+    # Row 1: prescription source document
     render_prescription_card(case)
 
-    # Row 1b: optional SIG decoder right below the prescription
+    # Row 1b: optional SIG decoder
     render_sig_help()
 
-    # Row 2: patient + prescriber side by side
+    # Row 2: patient + prescriber
     render_patient_prescriber(case)
 
-    # Row 3: entry form - the main work surface
+    # Row 3: entry form
     submitted_answers = render_entry_form()
     if submitted_answers is not None:
         handle_submission(submitted_answers)
@@ -1989,12 +2379,10 @@ def main() -> None:
         gate_threshold = 4
 
         if all_correct:
-            # Compact success path: success card -> label -> optional details expander.
             render_success_card(total, example_mode=st.session_state.example_mode)
             render_label_preview(case, feedback)
             render_feedback_details_expander(feedback)
         else:
-            # Mistakes path: detailed feedback first, then the gated label.
             render_feedback()
             if num_wrong >= gate_threshold and not st.session_state.label_revealed:
                 render_label_locked(num_wrong, total)
@@ -2004,7 +2392,256 @@ def main() -> None:
     # Missed-fields panel (only when populated)
     render_missed_fields_panel()
 
-    # Footer with reset
+
+# =====================================================================
+# Section: Drug Knowledge
+# Reads the drug from the current Prescription Entry case so switching
+# cases in the simulator updates what this section shows.
+# =====================================================================
+
+def render_drug_knowledge_section() -> None:
+    """Reference card for the drug in the current simulator case."""
+    case = st.session_state.current_case
+    drug_name = case["expected"]["drug_name"]
+    drug_key = drug_name.lower().strip()
+    info = DRUG_INFO.get(drug_key)
+
+    st.markdown(
+        '<div class="info-disclaimer">'
+        '<strong>Training reference only</strong> &middot; not clinical guidance.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.caption(
+        f"Showing the drug for the current Prescription Entry case: "
+        f"{case['case_id']} \u2014 {case['rx_text']['drug_line']}"
+    )
+
+    if info is None:
+        st.warning(
+            f"No drug reference entry available for {drug_name}. Advance to "
+            "a different case under Prescription Entry to view a covered drug."
+        )
+        return
+
+    with st.container(border=True):
+        # Title + category
+        st.markdown(
+            f'<div class="drug-info-title">{html.escape(info["generic"])}</div>'
+            f'<div class="drug-info-category">{html.escape(info["category"])}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Example brand names
+        st.markdown(
+            '<div class="drug-info-section-label">Example Brand Names</div>',
+            unsafe_allow_html=True,
+        )
+        if info["brand_examples"]:
+            brand_html = "".join(
+                f'<span class="drug-info-pill">{html.escape(b)}</span>'
+                for b in info["brand_examples"]
+            )
+            st.markdown(brand_html, unsafe_allow_html=True)
+        else:
+            st.markdown(
+                '<div class="drug-info-body">Generic only.</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Dosage forms
+        st.markdown(
+            '<div class="drug-info-section-label">Dosage Forms</div>',
+            unsafe_allow_html=True,
+        )
+        forms_html = "".join(
+            f'<span class="drug-info-pill">{html.escape(f)}</span>'
+            for f in info["dosage_forms"]
+        )
+        st.markdown(forms_html, unsafe_allow_html=True)
+
+        # Counseling point
+        st.markdown(
+            '<div class="drug-info-section-label">Counseling Point</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="drug-info-body">{html.escape(info["counseling"])}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # LASA warning
+        st.markdown(
+            '<div class="drug-info-section-label">Look-Alike / Sound-Alike</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="lasa-warning">{html.escape(info["lasa"])}</div>',
+            unsafe_allow_html=True,
+        )
+
+
+# =====================================================================
+# Section: Workflow Scenarios
+# Decision-making prototype with fictional pharmacy situations.
+# =====================================================================
+
+def render_workflow_scenarios_section() -> None:
+    """Pick a scenario, read the situation, choose an action, get feedback."""
+    st.markdown(
+        '<div class="info-disclaimer">'
+        '<strong>Training reference only</strong> &middot; all scenarios use '
+        'fictional patients and prescriptions.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ---- Scenario picker ----
+    active_id = st.session_state.get("scenario_id", SCENARIOS[0]["id"])
+    cols = st.columns(len(SCENARIOS))
+    for col, scen in zip(cols, SCENARIOS):
+        with col:
+            btn_type = "primary" if scen["id"] == active_id else "secondary"
+            if st.button(
+                scen["title"],
+                type=btn_type,
+                use_container_width=True,
+                key=f"scen_pick_{scen['id']}",
+            ):
+                # Switching scenarios resets the per-scenario state
+                if st.session_state.get("scenario_id") != scen["id"]:
+                    st.session_state.scenario_id = scen["id"]
+                    st.session_state.scenario_submitted = False
+                    st.session_state.scenario_choice = None
+                st.rerun()
+
+    scenario = next(s for s in SCENARIOS if s["id"] == active_id)
+
+    # ---- Active scenario card ----
+    with st.container(border=True):
+        st.markdown(
+            f'<div class="section-label">Scenario &middot; '
+            f'{html.escape(scenario["title"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="scenario-situation">{html.escape(scenario["situation"])}</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            '<div class="rx-mini-label" style="margin-top: 14px; '
+            'margin-bottom: 6px;">What would you do?</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Radio key is scenario-specific so each scenario remembers its own pick
+        selected_index = st.radio(
+            "Options",
+            options=list(range(len(scenario["options"]))),
+            format_func=lambda i: scenario["options"][i],
+            label_visibility="collapsed",
+            key=f"radio_{scenario['id']}",
+        )
+
+        submitted = (
+            st.session_state.get("scenario_submitted", False)
+            and st.session_state.get("scenario_id") == scenario["id"]
+        )
+
+        col_btn, _ = st.columns([1.6, 5])
+        with col_btn:
+            if not submitted:
+                if st.button(
+                    "Submit answer",
+                    type="primary",
+                    use_container_width=True,
+                    key=f"scen_submit_{scenario['id']}",
+                ):
+                    st.session_state.scenario_id = scenario["id"]
+                    st.session_state.scenario_choice = selected_index
+                    st.session_state.scenario_submitted = True
+                    st.rerun()
+            else:
+                if st.button(
+                    "Try again",
+                    type="secondary",
+                    use_container_width=True,
+                    key=f"scen_retry_{scenario['id']}",
+                ):
+                    st.session_state.scenario_submitted = False
+                    st.session_state.scenario_choice = None
+                    st.rerun()
+
+    # ---- Feedback after submission ----
+    if submitted:
+        user_choice = st.session_state.scenario_choice
+        best = scenario["best_index"]
+        is_correct = user_choice == best
+
+        if is_correct:
+            st.markdown(
+                '<div class="scenario-feedback-correct">'
+                '<div class="scenario-feedback-title">Best action selected.</div>'
+                f'<div class="scenario-feedback-body">{html.escape(scenario["explanation"])}</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            user_pick_text = (
+                scenario["options"][user_choice]
+                if user_choice is not None
+                else "(no choice)"
+            )
+            best_text = scenario["options"][best]
+            st.markdown(
+                '<div class="scenario-feedback-incorrect">'
+                '<div class="scenario-feedback-title">Not the best action.</div>'
+                '<div class="scenario-feedback-body">'
+                f'<strong>Best action:</strong> {html.escape(best_text)}<br><br>'
+                f'{html.escape(scenario["explanation"])}'
+                '</div>'
+                '<div class="scenario-user-pick">'
+                f'You chose: {html.escape(user_pick_text)}'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+
+# =====================================================================
+# Main
+# =====================================================================
+
+def main() -> None:
+    st.set_page_config(
+        page_title="Rx Entry Simulator",
+        page_icon=None,
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+    init_state()
+
+    # ---- Top: header with title and stat chips ----
+    render_header()
+
+    # ---- Top navigation ----
+    render_top_nav()
+
+    # ---- Section dispatch ----
+    active = st.session_state.active_section
+    if active == "Drug Knowledge":
+        render_drug_knowledge_section()
+    elif active == "Workflow Scenarios":
+        render_workflow_scenarios_section()
+    else:
+        # Default and "Prescription Entry" - the main simulator
+        render_prescription_entry_section()
+
+    # ---- Footer (always shown) ----
     render_footer()
 
 
