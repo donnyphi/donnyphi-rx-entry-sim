@@ -698,7 +698,69 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     max-width: 620px;
 }
 
-/* ---------- @media print: print just the label-print-source area ---------- */
+/* ---------- Compact label variant (smaller on-screen preview) ---------- */
+.label-paper-compact {
+    max-width: 400px !important;
+    padding: 16px 20px !important;
+}
+
+.label-paper-compact .label-pharmacy-name { font-size: 0.85rem; }
+.label-paper-compact .label-rx-num { font-size: 0.76rem; }
+.label-paper-compact .label-pharmacy-addr { font-size: 0.7rem; margin-bottom: 10px; padding-bottom: 8px; }
+.label-paper-compact .label-patient-row { font-size: 0.86rem; margin-bottom: 12px; }
+.label-paper-compact .label-patient-row .fill-date { font-size: 0.74rem; }
+.label-paper-compact .label-drug-line { font-size: 0.98rem; margin-bottom: 8px; }
+.label-paper-compact .label-sig-block { font-size: 0.92rem; line-height: 1.5; padding: 8px 0; margin-bottom: 10px; }
+.label-paper-compact .label-fill-row { font-size: 0.82rem; margin-bottom: 8px; padding-bottom: 8px; }
+.label-paper-compact .label-fill-row .fg-label { font-size: 0.68rem; }
+.label-paper-compact .label-prescriber-row { font-size: 0.8rem; }
+.label-paper-compact .label-prescriber-row .pr-label { font-size: 0.68rem; }
+.label-paper-compact .label-footer-stamp { font-size: 0.66rem; margin-top: 12px; padding-top: 8px; }
+
+/* ---------- SIG decoder ---------- */
+.sig-decoder {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin: 4px 0 14px 0;
+}
+
+.sig-decoder-title {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.sig-decoder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 4px 22px;
+}
+
+.sig-pair {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 0.85rem;
+    padding: 2px 0;
+}
+
+.sig-abbr {
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    font-weight: 700;
+    color: #0f766e;
+    min-width: 36px;
+}
+
+.sig-meaning {
+    color: #374151;
+}
+
+/* ---------- @media print: print the print-preview card's full-size label ---------- */
 @media print {
     body * {
         visibility: hidden !important;
@@ -714,9 +776,18 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
         padding: 24px !important;
         background: white !important;
         border: none !important;
+        box-shadow: none !important;
     }
-    .label-print-source .section-label {
+    .label-print-source .section-label,
+    .label-print-source .print-instructions {
         display: none !important;
+    }
+    .label-print-source .print-page-mockup {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        max-width: none !important;
+        background: white !important;
     }
     .label-print-source .label-paper {
         max-width: 600px !important;
@@ -754,6 +825,8 @@ def init_state() -> None:
         st.session_state.cases_completed = 0
     if "label_revealed" not in st.session_state:
         st.session_state.label_revealed = False
+    if "sig_help_open" not in st.session_state:
+        st.session_state.sig_help_open = False
 
 
 def advance_case() -> None:
@@ -959,6 +1032,57 @@ def render_patient_prescriber(case: dict) -> None:
         st.markdown(_party_card_html("Prescriber", prescriber_rows), unsafe_allow_html=True)
 
 
+def render_sig_help() -> None:
+    """Optional SIG abbreviation decoder. Toggled via a small button.
+
+    Sits just below the prescription card so students can quickly look up
+    shorthand they don't yet recognize.
+    """
+    is_open = st.session_state.get("sig_help_open", False)
+    btn_label = "Hide SIG decoder" if is_open else "Decode SIG"
+    col_btn, _ = st.columns([1.6, 5])
+    with col_btn:
+        if st.button(
+            btn_label,
+            type="secondary",
+            use_container_width=True,
+            key="sig_help_toggle",
+        ):
+            st.session_state.sig_help_open = not is_open
+            st.rerun()
+
+    if not is_open:
+        return
+
+    pairs = [
+        ("PO", "by mouth"),
+        ("QD", "once daily"),
+        ("BID", "twice daily"),
+        ("TID", "three times daily"),
+        ("QHS", "at bedtime"),
+        ("PRN", "as needed"),
+        ("tab", "tablet"),
+        ("cap", "capsule"),
+        ("x", "for (duration)"),
+    ]
+    pair_html = "".join(
+        f'<div class="sig-pair">'
+        f'<span class="sig-abbr">{html.escape(abbr)}</span>'
+        f'<span class="sig-meaning">{html.escape(meaning)}</span>'
+        f'</div>'
+        for abbr, meaning in pairs
+    )
+    decoder_html = (
+        '<div class="sig-decoder">'
+        '<div class="sig-decoder-title">Common SIG abbreviations</div>'
+        '<div class="sig-decoder-grid">'
+        + pair_html
+        + '</div>'
+        '</div>'
+    )
+    st.markdown(decoder_html, unsafe_allow_html=True)
+
+
 def render_entry_form() -> dict | None:
     """Render the entry form. Returns user answers if Check Entry was clicked."""
     with st.container(border=True):
@@ -1139,30 +1263,25 @@ def render_feedback() -> None:
         f'</div>'
     )
     items_html = _build_field_details_html(feedback)
-
-    st.markdown(
-        f"""
-        <div class="section-card">
-            <div class="section-label">Validation Results</div>
-            {banner}
-            {items_html}
-        </div>
-        """,
-        unsafe_allow_html=True,
+    full_html = (
+        '<div class="section-card">'
+        '<div class="section-label">Validation Results</div>'
+        + banner
+        + items_html
+        + '</div>'
     )
+    st.markdown(full_html, unsafe_allow_html=True)
 
 
 def render_success_card(total: int) -> None:
     """Compact 'all fields correct' card shown after a perfect entry."""
-    st.markdown(
-        f"""
-        <div class="section-card success-card">
-            <div class="success-title">{total}/{total} fields correct</div>
-            <div class="success-subtitle">Label preview is ready.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    html_str = (
+        '<div class="section-card success-card">'
+        f'<div class="success-title">{total}/{total} fields correct</div>'
+        '<div class="success-subtitle">Label preview is ready.</div>'
+        '</div>'
     )
+    st.markdown(html_str, unsafe_allow_html=True)
 
 
 def render_feedback_details_expander(feedback: dict) -> None:
@@ -1240,10 +1359,10 @@ def render_label_locked(num_wrong: int, total: int) -> None:
 def _build_label_inner_html(case: dict, feedback: dict) -> tuple[str, int]:
     """Build the inner HTML of the label (content inside .label-paper).
 
-    For each label field: if the user got it right, the user's value is
-    used. If wrong, the corrected value from the case is used with a '*'
-    marker. Returns (inner_html, num_corrections) so callers can also
-    render an appropriate banner.
+    Returns (inner_html, num_corrections). The HTML is a single flat
+    string with NO embedded newlines or leading whitespace, so it can
+    be safely interpolated into other markdown calls without triggering
+    CommonMark code-block parsing.
     """
     expected = case["expected"]
     patient = case["patient"]
@@ -1271,46 +1390,47 @@ def _build_label_inner_html(case: dict, feedback: dict) -> tuple[str, int]:
     rx_num = f"Rx# {int(digits):07d}"
     fill_date = date.today().strftime("%m/%d/%Y")
 
-    inner_html = f"""
-            <div class="label-pharmacy-row">
-                <div class="label-pharmacy-name">TRAINING PHARMACY</div>
-                <div class="label-rx-num">{rx_num}</div>
-            </div>
-            <div class="label-pharmacy-addr">
-                123 Sample Street &middot; Sample City, TX 78000 &middot; (555) 000-0000
-            </div>
-            <div class="label-patient-row">
-                <span class="pt-name">{html.escape(patient["name"])}</span>
-                <span class="fill-date">Filled: {fill_date}</span>
-            </div>
-            <div class="label-drug-line">
-                {html.escape(drug_val)}{mark(drug_corr)} {html.escape(strength_val)}{mark(strength_corr)}
-            </div>
-            <div class="label-sig-block">
-                {html.escape(sig_val)}{mark(sig_corr)}
-            </div>
-            <div class="label-fill-row">
-                <span>
-                    <span class="fg-label">Qty:</span>
-                    <span class="fg-value">{html.escape(str(qty_val))}{mark(qty_corr)}</span>
-                </span>
-                <span>
-                    <span class="fg-label">Days supply:</span>
-                    <span class="fg-value">{html.escape(str(days_val))}{mark(days_corr)}</span>
-                </span>
-                <span>
-                    <span class="fg-label">Refills:</span>
-                    <span class="fg-value">{html.escape(str(refills_val))}{mark(refills_corr)}</span>
-                </span>
-            </div>
-            <div class="label-prescriber-row">
-                <span class="pr-label">Prescriber:</span>
-                <span class="pr-name">{html.escape(prescriber["name"])}</span>
-            </div>
-            <div class="label-footer-stamp">
-                Training Only &middot; Not for Dispensing
-            </div>
-    """
+    inner_html = (
+        '<div class="label-pharmacy-row">'
+        '<div class="label-pharmacy-name">TRAINING PHARMACY</div>'
+        f'<div class="label-rx-num">{rx_num}</div>'
+        '</div>'
+        '<div class="label-pharmacy-addr">'
+        '123 Sample Street &middot; Sample City, TX 78000 &middot; (555) 000-0000'
+        '</div>'
+        '<div class="label-patient-row">'
+        f'<span class="pt-name">{html.escape(patient["name"])}</span>'
+        f'<span class="fill-date">Filled: {fill_date}</span>'
+        '</div>'
+        '<div class="label-drug-line">'
+        f'{html.escape(drug_val)}{mark(drug_corr)} '
+        f'{html.escape(strength_val)}{mark(strength_corr)}'
+        '</div>'
+        '<div class="label-sig-block">'
+        f'{html.escape(sig_val)}{mark(sig_corr)}'
+        '</div>'
+        '<div class="label-fill-row">'
+        '<span>'
+        '<span class="fg-label">Qty:</span> '
+        f'<span class="fg-value">{html.escape(str(qty_val))}{mark(qty_corr)}</span>'
+        '</span>'
+        '<span>'
+        '<span class="fg-label">Days supply:</span> '
+        f'<span class="fg-value">{html.escape(str(days_val))}{mark(days_corr)}</span>'
+        '</span>'
+        '<span>'
+        '<span class="fg-label">Refills:</span> '
+        f'<span class="fg-value">{html.escape(str(refills_val))}{mark(refills_corr)}</span>'
+        '</span>'
+        '</div>'
+        '<div class="label-prescriber-row">'
+        '<span class="pr-label">Prescriber:</span> '
+        f'<span class="pr-name">{html.escape(prescriber["name"])}</span>'
+        '</div>'
+        '<div class="label-footer-stamp">'
+        'Training Only &middot; Not for Dispensing'
+        '</div>'
+    )
     return inner_html, len(corrected_fields)
 
 
@@ -1333,60 +1453,52 @@ def _build_label_banner_html(num_corrections: int) -> str:
 
 
 def render_label_preview(case: dict, feedback: dict) -> None:
-    """Render the on-screen pharmacy label.
+    """Compact on-screen pharmacy label preview.
 
-    The outer card carries the .label-print-source class. @media print
-    rules use that class to print just this content when the user presses
-    Ctrl+P (or Cmd+P), independently of whether the PDF / Print Preview
-    expander is open.
+    Smaller than the PDF/Print Preview; this is a quick visual confirmation.
+    The PDF/Print Preview card below carries .label-print-source, so Ctrl+P
+    prints the full-size version, not this compact one.
     """
     inner_html, num_corrections = _build_label_inner_html(case, feedback)
     banner = _build_label_banner_html(num_corrections)
-    st.markdown(
-        f"""
-        <div class="section-card label-print-source">
-            <div class="section-label">Label Preview</div>
-            {banner}
-            <div class="label-paper">
-                {inner_html}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    label_html = (
+        '<div class="section-card">'
+        '<div class="section-label">Label Preview</div>'
+        + banner
+        + '<div class="label-paper label-paper-compact">'
+        + inner_html
+        + '</div>'
+        '</div>'
     )
+    st.markdown(label_html, unsafe_allow_html=True)
 
 
 def render_print_preview_section(case: dict, feedback: dict) -> None:
-    """PDF / Print Preview expander with a print-friendly mockup.
+    """Prominent PDF / Print Preview card. Always visible (no expander).
 
-    Visual only; the actual printing is handled by @media print rules
-    that target .label-print-source. This expander gives the user a
-    page-shaped preview plus the Ctrl+P / Cmd+P instruction.
+    Carries .label-print-source so @media print rules target this card
+    when the user presses Ctrl+P or Cmd+P, printing a clean full-size
+    version of the label with the chrome stripped away.
     """
     inner_html, num_corrections = _build_label_inner_html(case, feedback)
     banner = _build_label_banner_html(num_corrections)
-    with st.expander("PDF / Print Preview", expanded=False):
-        st.markdown(
-            """
-            <div class="print-instructions">
-                Use <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac)
-                or your browser's print option to save or print this training
-                label. Training only &middot; not for dispensing.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div class="print-page-mockup">
-                {banner}
-                <div class="label-paper">
-                    {inner_html}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    print_html = (
+        '<div class="section-card label-print-source">'
+        '<div class="section-label">PDF / Print Preview</div>'
+        '<div class="print-instructions">'
+        'Use <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) or your '
+        "browser's print option to save or print this training label. "
+        'Training only &middot; not for dispensing.'
+        '</div>'
+        '<div class="print-page-mockup">'
+        + banner
+        + '<div class="label-paper">'
+        + inner_html
+        + '</div>'
+        '</div>'
+        '</div>'
+    )
+    st.markdown(print_html, unsafe_allow_html=True)
 
 
 def render_footer() -> None:
@@ -1428,6 +1540,9 @@ def main() -> None:
     # ---- Workspace ----
     # Row 1: prescription across the top (the source document)
     render_prescription_card(case)
+
+    # Row 1b: optional SIG decoder right below the prescription
+    render_sig_help()
 
     # Row 2: patient + prescriber side by side
     render_patient_prescriber(case)
