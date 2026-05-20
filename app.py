@@ -1993,7 +1993,7 @@ def build_label_pdf(case: dict, feedback: dict) -> bytes:
 
     story.append(Spacer(1, 4))
     story.append(Paragraph(
-        "123 Sample Street \u00b7 Sample City, TX 78000 \u00b7 (555) 000-0000",
+        "7420 Mockingbird Lane \u00b7 Practice City, TX 78001 \u00b7 (555) 214-8096",
         address_style,
     ))
     story.append(HRFlowable(
@@ -2095,7 +2095,7 @@ def render_header() -> None:
         <div class="app-header">
             <div class="app-title-block">
                 <h1>Rx Entry Simulator</h1>
-                <div class="subtitle">Donny Phi</div>
+                <div class="subtitle">Pharmacy technician training tool</div>
             </div>
             <div class="stat-chips">
                 <span class="chip">
@@ -2621,7 +2621,7 @@ def _build_label_inner_html(case: dict, feedback: dict) -> tuple[str, int]:
         f'<div class="label-rx-num">{rx_num}</div>'
         '</div>'
         '<div class="label-pharmacy-addr">'
-        '123 Sample Street &middot; Sample City, TX 78000 &middot; (555) 000-0000'
+        '7420 Mockingbird Lane &middot; Practice City, TX 78001 &middot; (555) 214-8096'
         '</div>'
         '<div class="label-patient-row">'
         f'<span class="pt-name">{html.escape(patient["name"])}</span>'
