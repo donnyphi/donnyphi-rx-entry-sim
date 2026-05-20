@@ -1088,6 +1088,78 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     margin: 4px 0 18px 0;
 }
 
+/* ---------- Top navigation cards (3 large clickable buttons) ---------- */
+
+/* Hidden CSS hooks; one immediately precedes each nav button. */
+.nav-marker {
+    display: none;
+}
+
+/* Base styling for all nav-card buttons (active or inactive) */
+[data-testid="stElementContainer"]:has(.nav-marker) + [data-testid="stElementContainer"] .stButton > button,
+.element-container:has(.nav-marker) + .element-container .stButton > button {
+    min-height: 88px !important;
+    padding: 16px 18px !important;
+    border-radius: 10px !important;
+    font-weight: 400 !important;
+    text-align: center !important;
+    line-height: 1.4 !important;
+    white-space: normal !important;
+    transition: border-color 0.15s, color 0.15s, background 0.15s !important;
+}
+
+/* Title (the **bold** markdown segment renders as <strong>) */
+[data-testid="stElementContainer"]:has(.nav-marker) + [data-testid="stElementContainer"] .stButton > button strong,
+.element-container:has(.nav-marker) + .element-container .stButton > button strong {
+    font-size: 1.02rem !important;
+    font-weight: 700 !important;
+    line-height: 1.6 !important;
+    letter-spacing: 0.01em !important;
+}
+
+/* Description (rest of the markdown <p> after the <br>) */
+[data-testid="stElementContainer"]:has(.nav-marker) + [data-testid="stElementContainer"] .stButton > button p,
+.element-container:has(.nav-marker) + .element-container .stButton > button p {
+    font-size: 0.82rem !important;
+    line-height: 1.45 !important;
+    margin: 0 !important;
+}
+
+/* Active state: solid green background, white title, slightly muted description */
+[data-testid="stElementContainer"]:has(.nav-marker.nav-active) + [data-testid="stElementContainer"] .stButton > button,
+.element-container:has(.nav-marker.nav-active) + .element-container .stButton > button {
+    background: #0f766e !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid #0f766e !important;
+}
+[data-testid="stElementContainer"]:has(.nav-marker.nav-active) + [data-testid="stElementContainer"] .stButton > button strong,
+.element-container:has(.nav-marker.nav-active) + .element-container .stButton > button strong {
+    color: white !important;
+}
+
+/* Inactive state: white background, subtle border, dark title, muted description */
+[data-testid="stElementContainer"]:has(.nav-marker.nav-inactive) + [data-testid="stElementContainer"] .stButton > button,
+.element-container:has(.nav-marker.nav-inactive) + .element-container .stButton > button {
+    background: white !important;
+    color: #6b7280 !important;
+    border: 1px solid #d1d5db !important;
+}
+[data-testid="stElementContainer"]:has(.nav-marker.nav-inactive) + [data-testid="stElementContainer"] .stButton > button strong,
+.element-container:has(.nav-marker.nav-inactive) + .element-container .stButton > button strong {
+    color: #1f2937 !important;
+}
+
+/* Inactive hover: subtle teal hint to signal clickability */
+[data-testid="stElementContainer"]:has(.nav-marker.nav-inactive) + [data-testid="stElementContainer"] .stButton > button:hover,
+.element-container:has(.nav-marker.nav-inactive) + .element-container .stButton > button:hover {
+    background: #f9fafb !important;
+    border-color: #0f766e !important;
+}
+[data-testid="stElementContainer"]:has(.nav-marker.nav-inactive) + [data-testid="stElementContainer"] .stButton > button:hover strong,
+.element-container:has(.nav-marker.nav-inactive) + .element-container .stButton > button:hover strong {
+    color: #0f766e !important;
+}
+
 /* ---------- Training disclaimer banner ---------- */
 .info-disclaimer {
     background: #f0f9ff;
@@ -2323,18 +2395,41 @@ def render_footer() -> None:
 # =====================================================================
 
 def render_top_nav() -> None:
-    """Render a horizontal radio bound directly to session_state.active_section.
+    """Three large clickable nav cards across the top.
 
-    Streamlit's radio with `key="active_section"` updates the session key
-    automatically when the user clicks - no callback or st.rerun() needed.
+    Each card is a Streamlit button whose label uses markdown so the
+    title and description render as two visually distinct lines inside
+    one large click target. A hidden marker div before each button gives
+    CSS a :has() hook to style the active card green and the inactive
+    cards white. Clicking a card sets session_state.active_section and
+    reruns.
     """
-    st.radio(
-        "Top navigation",
-        options=["Prescription Entry", "Drug Knowledge", "Workflow Scenarios"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="active_section",
-    )
+    nav_items = [
+        ("Prescription Entry",
+         "Practice entering prescriptions and generating training labels."),
+        ("Drug Knowledge",
+         "Review medication basics, dosage forms, and LASA warnings."),
+        ("Workflow Scenarios",
+         "Practice refill, allergy, DUR, and insurance decisions."),
+    ]
+
+    active = st.session_state.get("active_section", "Prescription Entry")
+    cols = st.columns(3, gap="small")
+
+    for col, (title, desc) in zip(cols, nav_items):
+        with col:
+            state_class = "nav-active" if title == active else "nav-inactive"
+            st.markdown(
+                f'<div class="nav-marker {state_class}"></div>',
+                unsafe_allow_html=True,
+            )
+            # Two-space-then-newline is markdown's hard line break; renders as <br>
+            label = f"**{title}**  \n{desc}"
+            btn_key = f"nav_{title.lower().replace(' ', '_')}"
+            if st.button(label, key=btn_key, use_container_width=True):
+                st.session_state.active_section = title
+                st.rerun()
+
     st.markdown('<div class="top-nav-divider"></div>', unsafe_allow_html=True)
 
 
