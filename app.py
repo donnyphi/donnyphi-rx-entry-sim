@@ -2095,7 +2095,7 @@ def render_header() -> None:
         <div class="app-header">
             <div class="app-title-block">
                 <h1>Rx Entry Simulator</h1>
-                <div class="subtitle">Built by Donny Phi</div>
+                <div class="subtitle">Donny Phi</div>
             </div>
             <div class="stat-chips">
                 <span class="chip">
