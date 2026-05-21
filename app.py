@@ -49,28 +49,20 @@ FIELD_LABELS = {
 }
 
 # =====================================================================
-# Form widget key management
-#
-# Background: Streamlit has a known issue on some deployments (notably
-# Streamlit Cloud) where programmatic writes to st.session_state[key]
-# for an already-instantiated widget don't reliably re-bind the widget's
-# displayed value. The fix: dynamic widget keys. We append a revision
-# counter to every form widget's key. To force the form to refresh (with
-# example values OR blank), we bump the revision counter and Streamlit
-# instantiates fresh widget objects that read their initial values from
-# st.session_state[new_key] if set.
+# Form widget keys
+# Static keys for the seven entry-form widgets. show_example writes
+# values to these keys via st.session_state before widget render so the
+# inputs display the canonical answers. advance_case clears these keys
+# to blank the form for a new case.
 # =====================================================================
-
-# Bare field names used in widget keys. Each widget's actual key is
-# f"in_{field}_{revision}" where `revision` is form_widget_revision.
-FORM_FIELDS = [
-    "drug",
-    "strength",
-    "quantity",
-    "sig",
-    "days",
-    "refills",
-    "daw",
+WIDGET_KEYS = [
+    "in_drug",
+    "in_strength",
+    "in_quantity",
+    "in_sig",
+    "in_days",
+    "in_refills",
+    "in_daw",
 ]
 
 
@@ -1689,57 +1681,13 @@ def init_state() -> None:
         st.session_state.scenario_attempted_ids = set()
     if "scenario_correct_ids" not in st.session_state:
         st.session_state.scenario_correct_ids = set()
-    # Revision counter for dynamic form widget keys. Bumping this causes
-    # the seven entry-form widgets to be reinstantiated on the next
-    # render, which is how we force them to either pick up fresh example
-    # values or blank out. See _form_key / _bump_form_revision.
-    if "form_widget_revision" not in st.session_state:
-        st.session_state.form_widget_revision = 0
-
-
-def _form_key(field: str) -> str:
-    """Build the dynamic widget key for a form field, including the
-    current form_widget_revision so the form can be force-refreshed by
-    bumping the revision counter.
-
-    Example: _form_key("drug") -> "in_drug_3" when revision == 3.
-    """
-    rev = st.session_state.get("form_widget_revision", 0)
-    return f"in_{field}_{rev}"
-
-
-def _bump_form_revision() -> None:
-    """Increment form_widget_revision so the next render instantiates
-    fresh form widget objects with new keys.
-
-    After this call, every _form_key() returns a key that Streamlit has
-    not yet seen, so the next render creates new widget objects that
-    read their initial values from st.session_state[new_key] if it has
-    been pre-set, or display blank otherwise.
-
-    NOTE: This used to also delete the prior revision's session_state
-    entries to keep state tidy. That was removed because on Streamlit
-    Cloud, deleting a session_state key that is currently bound to a
-    live widget (which happens on the very first See Example click in a
-    fresh session, when the widget at in_drug_0 has just rendered) can
-    leave widget state inconsistent and prevent the revision bump from
-    taking effect. The few extra orphaned keys are a trivial memory
-    cost compared to the bug they prevent.
-    """
-    st.session_state.form_widget_revision = (
-        st.session_state.get("form_widget_revision", 0) + 1
-    )
 
 
 def advance_case() -> None:
-    """Mark current case complete, load a new one, clear feedback.
+    """Mark current case complete, load a new one, clear feedback and form.
 
     If the user is leaving example mode, the case is NOT counted toward
     cases_completed (example mode is demo, not practice).
-
-    Form widgets are refreshed via _bump_form_revision() so the new case
-    starts with blank widgets regardless of what was previously typed
-    or filled in.
     """
     current_id = st.session_state.current_case["case_id"]
     st.session_state.seen_case_ids.append(current_id)
@@ -1752,24 +1700,17 @@ def advance_case() -> None:
     st.session_state.last_feedback = {}
     st.session_state.label_revealed = False
     st.session_state.example_mode = False
-    # Fresh form widgets for the new case
-    _bump_form_revision()
+    # Clear form widgets for the new case
+    for key in WIDGET_KEYS:
+        st.session_state.pop(key, None)
 
 
 def try_again() -> None:
     """Return to editing the same case without advancing.
 
-    Behavior depends on whether the user was in example mode:
-
-    - Coming OUT of example mode (the form was filled with the canonical
-      answer by show_example): bump the form revision so the seven
-      widgets reinstantiate as fresh blank widgets. The user can type
-      their own answer from scratch on the same case.
-
-    - Otherwise (the user submitted their own answer and got something
-      wrong): do NOT bump the revision. The same widget instances persist
-      and the user's typed values stay so they can fix what was wrong
-      without retyping the correct fields.
+    If the user was in example mode, clear the form so they can type
+    their own answer. Otherwise, keep their typed values so they can
+    fix specific fields without retyping everything.
     """
     was_example = st.session_state.get("example_mode", False)
     st.session_state.submitted = False
@@ -1777,7 +1718,8 @@ def try_again() -> None:
     st.session_state.label_revealed = False
     st.session_state.example_mode = False
     if was_example:
-        _bump_form_revision()
+        for key in WIDGET_KEYS:
+            st.session_state.pop(key, None)
 
 
 def reset_session() -> None:
@@ -1803,61 +1745,34 @@ def handle_submission(user_answers: dict) -> None:
     tracker.add_misses_to_review(queue, case["case_id"], results)
 
 
-def _apply_example_state_to_session() -> None:
-    """Pre-fill the CURRENT revision's widget keys with the canonical
-    answers for the current case.
-
-    Must be called AFTER _bump_form_revision in show_example, so the
-    values land on the keys that the NEW widget instances will read on
-    the next render. Streamlit binds a freshly-instantiated widget's
-    initial value from st.session_state[its_key] if that key exists.
-
-    All values are stringified because the seven widgets are
-    text_input / text_area, which expect str.
-    """
-    case = st.session_state.current_case
-    expected = case["expected"]
-    st.session_state[_form_key("drug")] = str(expected["drug_name"])
-    st.session_state[_form_key("strength")] = str(expected["strength"])
-    st.session_state[_form_key("quantity")] = str(expected["quantity"])
-    st.session_state[_form_key("sig")] = str(expected.get("sig_english", ""))
-    st.session_state[_form_key("days")] = str(expected["days_supply"])
-    st.session_state[_form_key("refills")] = str(expected["refills"])
-    st.session_state[_form_key("daw")] = str(expected["daw"])
-
-
-def _process_pending_show_example() -> None:
-    """Legacy hook kept for backward compatibility. Does nothing.
-
-    Previously held the actual show_example work (when show_example was
-    just setting a pending flag). The new approach renders example-mode
-    widgets directly via value= + disabled=True with case-id-specific
-    keys, so no pre-render session_state work is needed.
-    """
-    # Clear any leftover pending flags from previous code versions
-    st.session_state.pop("_show_example_pending", False)
-
-
 def show_example() -> None:
     """The on_click callback for the See Example button.
 
-    Sets feedback + flags only. Does NOT write to any widget session_state
-    keys. The example values appear in the form because render_entry_form
-    renders DIFFERENT widgets when example_mode is True - widgets that use
-    case-id-specific keys and the `value=` + `disabled=True` parameters.
-    Since those keys are new (or already match the case being shown),
-    Streamlit creates fresh widget instances bound to value=, which is
-    the most reliable Streamlit pattern for pushing a value into a widget.
+    Writes the canonical answers directly to the seven widget session_state
+    keys. Streamlit's standard behavior is that on the next rerun, widgets
+    with those keys pick up the pre-set values as their displayed value.
 
-    This sidesteps the Streamlit Cloud fresh-session bug where writes to
-    st.session_state[widget_key] (from callbacks OR from script body)
-    do not always propagate to widget displayed values.
+    Known limitation: on Streamlit Cloud, fresh sessions (such as those
+    opened in incognito or by users who have never visited the app before)
+    do not always re-bind widget values from session_state writes. This
+    is a Streamlit framework issue that has been investigated and cannot
+    be reliably worked around. Regular browser sessions (the typical
+    user case) display the example correctly.
     """
     case = st.session_state.current_case
     expected = case["expected"]
 
-    # Build a perfect-feedback dict by running the checker on the
-    # canonical answers
+    # Write the seven widget values
+    st.session_state["in_drug"] = str(expected["drug_name"])
+    st.session_state["in_strength"] = str(expected["strength"])
+    st.session_state["in_quantity"] = str(expected["quantity"])
+    st.session_state["in_sig"] = str(expected.get("sig_english", ""))
+    st.session_state["in_days"] = str(expected["days_supply"])
+    st.session_state["in_refills"] = str(expected["refills"])
+    st.session_state["in_daw"] = str(expected["daw"])
+
+    # Build a perfect-feedback dict by running the checker on the canonical
+    # answers, then set the flags to show the success panel.
     user_answers = {
         "drug_name": expected["drug_name"],
         "strength": expected["strength"],
@@ -2258,17 +2173,14 @@ def render_prescription_card(case: dict) -> None:
                 '<div class="see-example-anchor"></div>',
                 unsafe_allow_html=True,
             )
-            # show_example (the on_click callback) bumps the form widget
-            # revision counter and pre-writes the seven new revision-keyed
-            # session_state entries with the canonical answers. On the next
-            # render, render_entry_form's widgets use _form_key("field"),
-            # which returns the new revision key. Since those keys are new
-            # to Streamlit, it instantiates fresh widget objects that read
-            # their initial values from the pre-written session_state - so
-            # the form visibly fills. This dynamic-key approach is the only
-            # reliable way to force widget values to update programmatically
-            # on Streamlit Cloud (direct st.session_state[key] writes for
-            # an existing widget don't always re-bind the displayed value).
+            # show_example (the on_click callback) writes the canonical
+            # answers to the seven widget session_state keys (in_drug,
+            # in_strength, etc.) and flips example_mode=True. On the
+            # subsequent rerun the widgets read those pre-set values
+            # and display them. Known limitation: this can fail on
+            # Streamlit Cloud fresh sessions (incognito, first-time
+            # users) due to a framework-level widget state propagation
+            # quirk. Regular browser sessions work correctly.
             st.button(
                 "See Example",
                 type="secondary",
@@ -2404,38 +2316,14 @@ def render_sig_help() -> None:
 def render_entry_form() -> dict | None:
     """Render the entry form. Returns user answers if Check Entry was clicked.
 
-    KEY DESIGN: this function renders DIFFERENT widgets based on
-    example_mode, which is what makes See Example reliably fill the
-    form on Streamlit Cloud fresh sessions.
-
-    Example mode widgets (example_mode == True):
-        key=f"ex_{field}_{case_id}", value=<canonical answer>, disabled=True
-        - Case-id-specific key means each case gets a fresh widget instance.
-        - value= sets the initial display value (used by Streamlit for keys
-          it hasn't seen before, which is the case for a brand-new case_id).
-        - disabled=True prevents the user from editing the canonical answers.
-
-    Normal mode widgets (example_mode == False):
-        key=_form_key(field), placeholder=<hint>, no value=
-        - Dynamic revision-based key (in_drug_0, in_drug_1, ...) lets
-          advance_case bump revision to blank the form for a new case,
-          and lets try_again-from-example bump revision to blank the form
-          after exiting example mode.
-        - User-typed values persist via Streamlit's normal widget-state
-          mechanism (session_state[key] writes that the widget itself
-          performs when the user types).
-
-    Why two separate widgets per field: this lets us avoid the Streamlit
-    Cloud bug where programmatic writes to st.session_state[widget_key]
-    don't always re-bind a widget's displayed value. With separate widget
-    instances per mode, we never need to write to widget keys at all -
-    we just render the right widget for the current mode.
+    Uses static widget keys (in_drug, in_strength, etc.). The seven widgets
+    display whatever is currently in session_state for those keys, which is
+    either:
+      - blank (fresh session or after advance_case clears the form)
+      - the user's typed values (Streamlit auto-populates session_state on
+        every keystroke for widgets with keys)
+      - the canonical answers (show_example writes them before rerun)
     """
-    example = st.session_state.get("example_mode", False)
-    case = st.session_state.current_case
-    case_id = case["case_id"]
-    expected = case["expected"] if example else None
-
     with st.container(border=True):
         st.markdown(
             '<div class="section-label" style="margin: 6px 0 4px 0;">'
@@ -2451,33 +2339,17 @@ def render_entry_form() -> dict | None:
         )
         c1, c2 = st.columns([1, 1])
         with c1:
-            if example:
-                drug = st.text_input(
-                    "Drug name",
-                    value=str(expected["drug_name"]),
-                    disabled=True,
-                    key=f"ex_drug_{case_id}",
-                )
-            else:
-                drug = st.text_input(
-                    "Drug name",
-                    key=_form_key("drug"),
-                    placeholder="Generic name",
-                )
+            drug = st.text_input(
+                "Drug name",
+                key="in_drug",
+                placeholder="Generic name",
+            )
         with c2:
-            if example:
-                strength = st.text_input(
-                    "Strength",
-                    value=str(expected["strength"]),
-                    disabled=True,
-                    key=f"ex_strength_{case_id}",
-                )
-            else:
-                strength = st.text_input(
-                    "Strength",
-                    key=_form_key("strength"),
-                    placeholder="e.g. 500 mg",
-                )
+            strength = st.text_input(
+                "Strength",
+                key="in_strength",
+                placeholder="e.g. 500 mg",
+            )
 
         # Fill Details
         st.markdown(
@@ -2486,77 +2358,36 @@ def render_entry_form() -> dict | None:
         )
         c3, c4, c5, c6 = st.columns(4)
         with c3:
-            if example:
-                quantity = st.text_input(
-                    "Quantity",
-                    value=str(expected["quantity"]),
-                    disabled=True,
-                    key=f"ex_quantity_{case_id}",
-                )
-            else:
-                quantity = st.text_input(
-                    "Quantity", key=_form_key("quantity"), placeholder="0"
-                )
+            quantity = st.text_input(
+                "Quantity", key="in_quantity", placeholder="0"
+            )
         with c4:
-            if example:
-                days = st.text_input(
-                    "Days supply",
-                    value=str(expected["days_supply"]),
-                    disabled=True,
-                    key=f"ex_days_{case_id}",
-                )
-            else:
-                days = st.text_input(
-                    "Days supply", key=_form_key("days"), placeholder="0"
-                )
+            days = st.text_input(
+                "Days supply", key="in_days", placeholder="0"
+            )
         with c5:
-            if example:
-                refills = st.text_input(
-                    "Refills",
-                    value=str(expected["refills"]),
-                    disabled=True,
-                    key=f"ex_refills_{case_id}",
-                )
-            else:
-                refills = st.text_input(
-                    "Refills", key=_form_key("refills"), placeholder="0"
-                )
+            refills = st.text_input(
+                "Refills", key="in_refills", placeholder="0"
+            )
         with c6:
-            if example:
-                daw = st.text_input(
-                    "DAW code",
-                    value=str(expected["daw"]),
-                    disabled=True,
-                    key=f"ex_daw_{case_id}",
-                )
-            else:
-                daw = st.text_input(
-                    "DAW code", key=_form_key("daw"), placeholder="0"
-                )
+            daw = st.text_input(
+                "DAW code", key="in_daw", placeholder="0"
+            )
 
         # Patient Directions
         st.markdown(
             '<div class="form-group-label">Patient Directions (SIG)</div>',
             unsafe_allow_html=True,
         )
-        if example:
-            sig = st.text_area(
-                "Translate shorthand into plain English",
-                value=str(expected.get("sig_english", "")),
-                disabled=True,
-                key=f"ex_sig_{case_id}",
-                height=110,
-            )
-        else:
-            sig = st.text_area(
-                "Translate shorthand into plain English",
-                key=_form_key("sig"),
-                height=110,
-                placeholder=(
-                    "Include verb, quantity, dosage form, route, "
-                    "frequency, and duration when applicable."
-                ),
-            )
+        sig = st.text_area(
+            "Translate shorthand into plain English",
+            key="in_sig",
+            height=110,
+            placeholder=(
+                "Include verb, quantity, dosage form, route, "
+                "frequency, and duration when applicable."
+            ),
+        )
 
         # Action buttons
         st.markdown(
@@ -3005,25 +2836,7 @@ def render_top_nav() -> None:
 
 def render_prescription_entry_section() -> None:
     """The prescription-entry simulator workflow (was the body of main)."""
-    # FIRST: process any pending See Example request. This MUST run before
-    # any widgets are rendered. The on_click=show_example callback only
-    # sets a flag (_show_example_pending); the actual work happens here
-    # in the script body, which guarantees the session_state writes
-    # persist into widget binding on Streamlit Cloud fresh sessions.
-    _process_pending_show_example()
-
     case = st.session_state.current_case
-
-    # Invisible build marker for deployment verification. Inspect page
-    # source in dev tools and look for data-build="mode-diff-v5" to
-    # confirm this exact code is what's running. No visible UI impact.
-    st.markdown(
-        '<div data-build="mode-diff-v5" '
-        f'data-form-rev="{st.session_state.get("form_widget_revision", 0)}" '
-        f'data-example-mode="{st.session_state.get("example_mode", False)}" '
-        'style="display:none;"></div>',
-        unsafe_allow_html=True,
-    )
 
     st.markdown(
         '<div class="workflow-hint">'
