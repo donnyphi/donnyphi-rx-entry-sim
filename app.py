@@ -50,9 +50,9 @@ FIELD_LABELS = {
 
 # =====================================================================
 # Form widget keys
-# Static keys for the seven entry-form widgets. show_example writes
-# values to these keys via st.session_state before widget render so the
-# inputs display the canonical answers. advance_case clears these keys
+# Static keys for the seven entry-form widgets. _trigger_example_from_url
+# writes values to these keys via st.session_state before widget render so
+# the inputs display the canonical answers. advance_case clears these keys
 # to blank the form for a new case.
 # =====================================================================
 WIDGET_KEYS = [
@@ -896,6 +896,45 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 .stButton > button:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+/* ---------- See Example HTML link ----------
+   This is a plain HTML <a> tag, not a Streamlit button, because URL-based
+   navigation is reliable across all session types on Streamlit Cloud
+   (authenticated owner, anonymous visitor, incognito). It's styled to
+   visually match the primary green button. */
+.see-example-link {
+    display: inline-block;
+    background-color: #0f766e;
+    color: white !important;
+    border: 1px solid #0f766e;
+    border-radius: 6px;
+    padding: 7px 20px;
+    font-weight: 500;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    text-align: center;
+    text-decoration: none !important;
+    width: 100%;
+    box-sizing: border-box;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+    min-height: 38px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.see-example-link:hover {
+    background-color: #115e59;
+    border-color: #115e59;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.see-example-link.see-example-disabled,
+span.see-example-link {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* ---------- Feedback panel ---------- */
@@ -1756,52 +1795,6 @@ def handle_submission(user_answers: dict) -> None:
     tracker.add_misses_to_review(queue, case["case_id"], results)
 
 
-def show_example() -> None:
-    """The on_click callback for the See Example button.
-
-    Writes the canonical answers directly to the seven widget session_state
-    keys. Streamlit's standard behavior is that on the next rerun, widgets
-    with those keys pick up the pre-set values as their displayed value.
-
-    Known limitation: on Streamlit Cloud, fresh sessions (such as those
-    opened in incognito or by users who have never visited the app before)
-    do not always re-bind widget values from session_state writes. This
-    is a Streamlit framework issue that has been investigated and cannot
-    be reliably worked around. Regular browser sessions (the typical
-    user case) display the example correctly.
-    """
-    case = st.session_state.current_case
-    expected = case["expected"]
-
-    # Write the seven widget values
-    st.session_state["in_drug"] = str(expected["drug_name"])
-    st.session_state["in_strength"] = str(expected["strength"])
-    st.session_state["in_quantity"] = str(expected["quantity"])
-    st.session_state["in_sig"] = str(expected.get("sig_english", ""))
-    st.session_state["in_days"] = str(expected["days_supply"])
-    st.session_state["in_refills"] = str(expected["refills"])
-    st.session_state["in_daw"] = str(expected["daw"])
-
-    # Build a perfect-feedback dict by running the checker on the canonical
-    # answers, then set the flags to show the success panel.
-    user_answers = {
-        "drug_name": expected["drug_name"],
-        "strength": expected["strength"],
-        "quantity": expected["quantity"],
-        "sig": expected.get("sig_english", ""),
-        "days_supply": expected["days_supply"],
-        "refills": expected["refills"],
-        "daw": expected["daw"],
-    }
-    results = checker.check_all(user_answers, expected, case.get("extras"))
-
-    st.session_state.last_feedback = results
-    st.session_state.submitted = True
-    st.session_state.label_revealed = False
-    st.session_state.example_mode = True
-    # Stats and missed-fields queue are intentionally NOT touched.
-
-
 def overall_accuracy() -> tuple[int, int]:
     """Return (correct, total) across all attempted fields this session."""
     stats = st.session_state.stats
@@ -2184,22 +2177,25 @@ def render_prescription_card(case: dict) -> None:
                 '<div class="see-example-anchor"></div>',
                 unsafe_allow_html=True,
             )
-            # show_example (the on_click callback) writes the canonical
-            # answers to the seven widget session_state keys (in_drug,
-            # in_strength, etc.) and flips example_mode=True. On the
-            # subsequent rerun the widgets read those pre-set values
-            # and display them. Known limitation: this can fail on
-            # Streamlit Cloud fresh sessions (incognito, first-time
-            # users) due to a framework-level widget state propagation
-            # quirk. Regular browser sessions work correctly.
-            st.button(
-                "See Example",
-                type="secondary",
-                key="see_example_btn",
-                use_container_width=True,
-                disabled=st.session_state.get("submitted", False),
-                on_click=show_example,
-            )
+            # See Example is an HTML link (not a Streamlit button) that
+            # navigates to ?example=1. The URL change triggers a Streamlit
+            # rerun; the handler at the top of render_prescription_entry_section
+            # picks up the query param and applies the example values via
+            # script-body writes. This bypasses st.button's on_click chain,
+            # which is unreliable on Streamlit Cloud for anonymous sessions.
+            already_submitted = st.session_state.get("submitted", False)
+            disabled_cls = " see-example-disabled" if already_submitted else ""
+            if already_submitted:
+                link_html = (
+                    f'<span class="see-example-link see-example-disabled">'
+                    f'See Example</span>'
+                )
+            else:
+                link_html = (
+                    f'<a href="?example=1" target="_self" '
+                    f'class="see-example-link">See Example</a>'
+                )
+            st.markdown(link_html, unsafe_allow_html=True)
 
         # Sig row
         st.markdown(
@@ -2333,7 +2329,8 @@ def render_entry_form() -> dict | None:
       - blank (fresh session or after advance_case clears the form)
       - the user's typed values (Streamlit auto-populates session_state on
         every keystroke for widgets with keys)
-      - the canonical answers (show_example writes them before rerun)
+      - the canonical answers (_trigger_example_from_url writes them
+        before widget render when ?example=1 is in the URL)
     """
     with st.container(border=True):
         st.markdown(
@@ -2845,8 +2842,63 @@ def render_top_nav() -> None:
 # Wraps the existing simulator workflow. No logic change.
 # =====================================================================
 
+def _trigger_example_from_url() -> None:
+    """Apply the example answers to widget session_state and set flags.
+
+    Called from the SCRIPT BODY (not from a callback) when a ?example=1
+    query parameter is detected in the URL. This URL-based trigger
+    bypasses the on_click callback chain, which is unreliable on
+    Streamlit Cloud for anonymous (non-logged-in) sessions. Writes
+    happen in the script body before widgets render, which is the most
+    reliable Streamlit pattern for widget state binding.
+    """
+    case = st.session_state.current_case
+    expected = case["expected"]
+
+    # Write the seven widget values
+    st.session_state["in_drug"] = str(expected["drug_name"])
+    st.session_state["in_strength"] = str(expected["strength"])
+    st.session_state["in_quantity"] = str(expected["quantity"])
+    st.session_state["in_sig"] = str(expected.get("sig_english", ""))
+    st.session_state["in_days"] = str(expected["days_supply"])
+    st.session_state["in_refills"] = str(expected["refills"])
+    st.session_state["in_daw"] = str(expected["daw"])
+
+    # Build perfect feedback
+    user_answers = {
+        "drug_name": expected["drug_name"],
+        "strength": expected["strength"],
+        "quantity": expected["quantity"],
+        "sig": expected.get("sig_english", ""),
+        "days_supply": expected["days_supply"],
+        "refills": expected["refills"],
+        "daw": expected["daw"],
+    }
+    results = checker.check_all(user_answers, expected, case.get("extras"))
+
+    st.session_state.last_feedback = results
+    st.session_state.submitted = True
+    st.session_state.label_revealed = False
+    st.session_state.example_mode = True
+
+    # Clear the URL param so a page refresh does not re-trigger this.
+    # Clearing query params triggers a Streamlit rerun, but the session_state
+    # writes above persist into the next run.
+    try:
+        del st.query_params["example"]
+    except KeyError:
+        pass
+
+
 def render_prescription_entry_section() -> None:
     """The prescription-entry simulator workflow (was the body of main)."""
+    # FIRST: check if the See Example URL trigger fired. The button itself
+    # is an HTML link to ?example=1, not a Streamlit button, because
+    # Streamlit's on_click callback is unreliable for anonymous sessions
+    # on Streamlit Cloud. URL state survives every session-handling quirk.
+    if "example" in st.query_params:
+        _trigger_example_from_url()
+
     case = st.session_state.current_case
 
     st.markdown(
