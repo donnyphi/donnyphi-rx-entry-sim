@@ -871,6 +871,49 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     padding-bottom: 2px !important;
 }
 
+/* ---------- Fake inputs for example mode ----------
+   Pure HTML mock-ups styled to look IDENTICAL to st.text_input and
+   st.text_area. Used when example_mode is True so the canonical
+   answer values render as static markup that no browser color mode,
+   no Chrome auto-dark inversion, and no Streamlit deployment quirk
+   can hide. All colors are explicit and !important-pinned so nothing
+   downstream can override them. */
+.fake-input-wrapper {
+    margin-bottom: 4px;
+    color-scheme: light;
+}
+.fake-input-label {
+    font-size: 0.8rem !important;
+    color: #374151 !important;
+    font-weight: 500 !important;
+    padding-bottom: 2px;
+    line-height: 1.4;
+}
+.fake-input,
+.fake-textarea {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px;
+    background: #fafbfc !important;
+    color: #0f172a !important;
+    font-size: 0.9rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    box-sizing: border-box;
+    line-height: 1.5;
+    word-break: break-word;
+}
+.fake-input {
+    padding: 7px 12px;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+}
+.fake-textarea {
+    padding: 8px 12px;
+    min-height: 110px;
+    white-space: pre-wrap;
+}
+
 /* ---------- Buttons ---------- */
 .stButton > button {
     border-radius: 6px;
@@ -2339,29 +2382,63 @@ def render_sig_help() -> None:
     st.markdown(decoder_html, unsafe_allow_html=True)
 
 
+def _fake_input_html(label: str, value: str) -> str:
+    """Build static HTML that mimics st.text_input visually.
+
+    Used in example mode to render the canonical answer fields as
+    pure HTML so no Streamlit widget machinery is involved. The
+    .fake-input and .fake-input-label classes are styled in CUSTOM_CSS
+    to match Streamlit's real text_input styling pixel for pixel.
+    """
+    safe_label = html.escape(label)
+    safe_value = html.escape(value)
+    return (
+        '<div class="fake-input-wrapper">'
+        f'<div class="fake-input-label">{safe_label}</div>'
+        f'<div class="fake-input">{safe_value}</div>'
+        '</div>'
+    )
+
+
+def _fake_textarea_html(label: str, value: str) -> str:
+    """Build static HTML that mimics st.text_area visually (multi-line)."""
+    safe_label = html.escape(label)
+    safe_value = html.escape(value)
+    return (
+        '<div class="fake-input-wrapper">'
+        f'<div class="fake-input-label">{safe_label}</div>'
+        f'<div class="fake-textarea">{safe_value}</div>'
+        '</div>'
+    )
+
+
 def render_entry_form() -> dict | None:
     """Render the entry form. Returns user answers if Check Entry was clicked.
 
-    Renders DIFFERENT widgets based on example_mode:
+    Two completely separate render paths based on example_mode:
 
     Example mode (after See Example click):
-        Widgets render with key=f"ex_{field}_{case_id}", value=<answer>,
-        disabled=True. The value= parameter pushes the value into the
-        widget at render time, which works reliably across every browser
-        session now that color-scheme is locked to light at the root
-        (prevents Chrome Auto Dark from inverting disabled-input text
-        into the background). Case-id-suffixed keys ensure Streamlit
-        creates fresh widget instances when the case changes, so the
-        new case's example values display correctly.
+        Renders pure HTML divs styled to look pixel-identical to
+        Streamlit's text_input / text_area widgets, with the canonical
+        answers baked into the markup. No Streamlit widgets are
+        instantiated for the fields. This bypasses every browser CSS
+        rendering quirk, every Chrome auto-dark inversion, every
+        widget-state propagation issue, and every Streamlit Cloud
+        deployment caching pattern that has caused the seven prior
+        attempts to fail visually. The user sees what looks like the
+        same entry form, just filled in.
 
     Normal mode (user is typing their own answer):
-        Widgets render with key="in_drug" etc., placeholders, no value=.
-        User input persists across reruns via Streamlit's standard widget
-        state mechanism.
+        Real editable st.text_input / st.text_area widgets with
+        key="in_drug" etc. and placeholders. User input persists across
+        reruns via Streamlit's standard widget state mechanism.
+
+    The Check Entry / Try Again / Next Case button row renders the same
+    way in both modes (real Streamlit buttons, because the user must
+    actually click them).
     """
     example = st.session_state.get("example_mode", False)
     case = st.session_state.current_case
-    case_id = case["case_id"]
     expected = case["expected"] if example else None
 
     with st.container(border=True):
@@ -2380,28 +2457,24 @@ def render_entry_form() -> dict | None:
         c1, c2 = st.columns([1, 1])
         with c1:
             if example:
-                drug = st.text_input(
-                    "Drug name",
-                    value=str(expected["drug_name"]),
-                    disabled=True,
-                    key=f"ex_drug_{case_id}",
+                st.markdown(
+                    _fake_input_html("Drug name", str(expected["drug_name"])),
+                    unsafe_allow_html=True,
                 )
             else:
-                drug = st.text_input(
+                st.text_input(
                     "Drug name",
                     key="in_drug",
                     placeholder="Generic name",
                 )
         with c2:
             if example:
-                strength = st.text_input(
-                    "Strength",
-                    value=str(expected["strength"]),
-                    disabled=True,
-                    key=f"ex_strength_{case_id}",
+                st.markdown(
+                    _fake_input_html("Strength", str(expected["strength"])),
+                    unsafe_allow_html=True,
                 )
             else:
-                strength = st.text_input(
+                st.text_input(
                     "Strength",
                     key="in_strength",
                     placeholder="e.g. 500 mg",
@@ -2415,50 +2488,42 @@ def render_entry_form() -> dict | None:
         c3, c4, c5, c6 = st.columns(4)
         with c3:
             if example:
-                quantity = st.text_input(
-                    "Quantity",
-                    value=str(expected["quantity"]),
-                    disabled=True,
-                    key=f"ex_quantity_{case_id}",
+                st.markdown(
+                    _fake_input_html("Quantity", str(expected["quantity"])),
+                    unsafe_allow_html=True,
                 )
             else:
-                quantity = st.text_input(
+                st.text_input(
                     "Quantity", key="in_quantity", placeholder="0"
                 )
         with c4:
             if example:
-                days = st.text_input(
-                    "Days supply",
-                    value=str(expected["days_supply"]),
-                    disabled=True,
-                    key=f"ex_days_{case_id}",
+                st.markdown(
+                    _fake_input_html("Days supply", str(expected["days_supply"])),
+                    unsafe_allow_html=True,
                 )
             else:
-                days = st.text_input(
+                st.text_input(
                     "Days supply", key="in_days", placeholder="0"
                 )
         with c5:
             if example:
-                refills = st.text_input(
-                    "Refills",
-                    value=str(expected["refills"]),
-                    disabled=True,
-                    key=f"ex_refills_{case_id}",
+                st.markdown(
+                    _fake_input_html("Refills", str(expected["refills"])),
+                    unsafe_allow_html=True,
                 )
             else:
-                refills = st.text_input(
+                st.text_input(
                     "Refills", key="in_refills", placeholder="0"
                 )
         with c6:
             if example:
-                daw = st.text_input(
-                    "DAW code",
-                    value=str(expected["daw"]),
-                    disabled=True,
-                    key=f"ex_daw_{case_id}",
+                st.markdown(
+                    _fake_input_html("DAW code", str(expected["daw"])),
+                    unsafe_allow_html=True,
                 )
             else:
-                daw = st.text_input(
+                st.text_input(
                     "DAW code", key="in_daw", placeholder="0"
                 )
 
@@ -2468,15 +2533,15 @@ def render_entry_form() -> dict | None:
             unsafe_allow_html=True,
         )
         if example:
-            sig = st.text_area(
-                "Translate shorthand into plain English",
-                value=str(expected.get("sig_english", "")),
-                disabled=True,
-                key=f"ex_sig_{case_id}",
-                height=110,
+            st.markdown(
+                _fake_textarea_html(
+                    "Translate shorthand into plain English",
+                    str(expected.get("sig_english", "")),
+                ),
+                unsafe_allow_html=True,
             )
         else:
-            sig = st.text_area(
+            st.text_area(
                 "Translate shorthand into plain English",
                 key="in_sig",
                 height=110,
@@ -2527,15 +2592,18 @@ def render_entry_form() -> dict | None:
                 use_container_width=True,
             )
 
+    # In example mode, Check Entry is disabled (submitted=True), so this
+    # branch never executes. The field values are read from the real
+    # widget state on real submissions only.
     if submit:
         return {
-            "drug_name": drug,
-            "strength": strength,
-            "quantity": quantity,
-            "sig": sig,
-            "days_supply": days,
-            "refills": refills,
-            "daw": daw,
+            "drug_name": st.session_state.get("in_drug", ""),
+            "strength": st.session_state.get("in_strength", ""),
+            "quantity": st.session_state.get("in_quantity", ""),
+            "sig": st.session_state.get("in_sig", ""),
+            "days_supply": st.session_state.get("in_days", ""),
+            "refills": st.session_state.get("in_refills", ""),
+            "daw": st.session_state.get("in_daw", ""),
         }
     if try_again_clicked:
         try_again()
