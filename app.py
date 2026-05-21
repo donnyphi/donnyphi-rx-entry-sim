@@ -1397,14 +1397,39 @@ span.see-example-link {
     color: #075985;
 }
 
-/* ---------- Defensive container borders ----------
-   Some Streamlit Cloud / Chrome incognito combinations render
-   st.container(border=True) without a visible border because the
-   default border color matches their inverted background. Pin the
-   border, background, and color-scheme so the box renders the same
-   in every browser session. */
+/* ---------- Card border anchor (forces visible container borders) ----------
+   The screenshot from incognito showed st.container(border=True) rendering
+   without a visible border because Streamlit 1.57's container DOM differs
+   from the version my old [data-testid="stVerticalBlockBorderWrapper"]
+   selector targeted. This rule is version-agnostic:
+
+   1. Each bordered container has a <div class="card-border-anchor"></div>
+      inserted as its first child (see render_prescription_card,
+      render_entry_form, render_drug_knowledge_section,
+      render_workflow_scenarios_section).
+   2. The :has() selector finds every stVerticalBlock that contains the
+      anchor as a descendant.
+   3. The :not(:has(...)) clause excludes outer/parent stVerticalBlocks
+      that also happen to contain the anchor via nesting, so the rule
+      lands ONLY on the innermost block (the container we want bordered).
+   4. The marker itself is hidden so it does not take up vertical space. */
+[data-testid="stVerticalBlock"]:has(.card-border-anchor):not(:has([data-testid="stVerticalBlock"] .card-border-anchor)) {
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    padding: 14px 18px !important;
+    margin-bottom: 12px !important;
+}
+
+.card-border-anchor {
+    display: none !important;
+}
+
+/* Fallback for older Streamlit versions that still use
+   stVerticalBlockBorderWrapper for the bordered container. Harmless
+   on newer versions where this selector simply does not match. */
 [data-testid="stVerticalBlockBorderWrapper"] {
-    border: 1px solid #e5e7eb !important;
+    border: 1px solid #d1d5db !important;
     border-radius: 8px !important;
     background: #ffffff !important;
     color-scheme: light;
@@ -2223,6 +2248,13 @@ def render_prescription_card(case: dict) -> None:
     daw_value = html.escape(_strip_label(rx["daw_text"]))
 
     with st.container(border=True):
+        # Border marker so CSS can force a visible outline regardless of
+        # the Streamlit version's default container rendering. See the
+        # .card-border-anchor rule in CUSTOM_CSS.
+        st.markdown(
+            '<div class="card-border-anchor"></div>',
+            unsafe_allow_html=True,
+        )
         # Header row
         st.markdown(
             '<div class="rx-header-row">'
@@ -2442,6 +2474,11 @@ def render_entry_form() -> dict | None:
     expected = case["expected"] if example else None
 
     with st.container(border=True):
+        # Border marker (see .card-border-anchor rule in CUSTOM_CSS)
+        st.markdown(
+            '<div class="card-border-anchor"></div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             '<div class="section-label" style="margin: 6px 0 4px 0;">'
             'Rx Processing &middot; Entry Form'
@@ -3122,6 +3159,11 @@ def render_drug_knowledge_section() -> None:
 
     # ---- Drug reference card ----
     with st.container(border=True):
+        # Border marker (see .card-border-anchor rule in CUSTOM_CSS)
+        st.markdown(
+            '<div class="card-border-anchor"></div>',
+            unsafe_allow_html=True,
+        )
         # Title + category
         st.markdown(
             f'<div class="drug-info-title">{html.escape(info["generic"])}</div>'
@@ -3264,6 +3306,11 @@ def render_workflow_scenarios_section() -> None:
 
     # ---- Active scenario card ----
     with st.container(border=True):
+        # Border marker (see .card-border-anchor rule in CUSTOM_CSS)
+        st.markdown(
+            '<div class="card-border-anchor"></div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             f'<div class="section-label">Scenario &middot; '
             f'{html.escape(scenario["title"])}</div>',
