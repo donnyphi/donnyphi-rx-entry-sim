@@ -841,6 +841,17 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     box-shadow: 0 0 0 1px #0f766e !important;
 }
 
+/* Force placeholder visibility regardless of browser auto-dark-mode or
+   other default rendering quirks. Without this, Chrome's experimental
+   "Auto Dark Mode for Web Contents" (enabled by default in some recent
+   Chrome incognito sessions) renders the default light-gray placeholders
+   as essentially invisible. */
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: #9ca3af !important;
+    opacity: 1 !important;
+}
+
 .stTextInput label,
 .stTextArea label {
     font-size: 0.8rem !important;
