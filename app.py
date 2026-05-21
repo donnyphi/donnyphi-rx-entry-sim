@@ -1750,6 +1750,36 @@ def handle_submission(user_answers: dict) -> None:
     tracker.add_misses_to_review(queue, case["case_id"], results)
 
 
+def _apply_example_state_to_session() -> None:
+    """Write the current case's canonical answers into the seven widget
+    session_state keys (in_drug, in_strength, in_quantity, in_sig,
+    in_days, in_refills, in_daw).
+
+    Called from two places:
+    1. show_example (the on_click callback) - the standard Streamlit
+       callback path. Works in most configurations.
+    2. render_entry_form, at the top, when example_mode is True - the
+       BULLETPROOF defensive path. Streamlit's widget binding reads
+       session_state[key] when each widget is instantiated. Setting the
+       keys in the same script run, in code that runs immediately before
+       the widget creation, is guaranteed to be picked up by the
+       widget's initial-value binding. This survives any callback
+       propagation timing quirks on deployed servers.
+
+    All values are stringified because the widgets are text_input /
+    text_area, which expect str.
+    """
+    case = st.session_state.current_case
+    expected = case["expected"]
+    st.session_state["in_drug"] = str(expected["drug_name"])
+    st.session_state["in_strength"] = str(expected["strength"])
+    st.session_state["in_quantity"] = str(expected["quantity"])
+    st.session_state["in_sig"] = str(expected.get("sig_english", ""))
+    st.session_state["in_days"] = str(expected["days_supply"])
+    st.session_state["in_refills"] = str(expected["refills"])
+    st.session_state["in_daw"] = str(expected["daw"])
+
+
 def show_example() -> None:
     """Pre-fill the form with the correct answers and mark the case as
     submitted in example mode.
@@ -1757,18 +1787,20 @@ def show_example() -> None:
     For onboarding: lets a new user see what a completed entry looks like
     plus the full validation + label preview output, without affecting
     stats or the missed-fields list.
+
+    NOTE on the dual-write design: this function writes the seven INPUT_KEYS
+    via _apply_example_state_to_session, AND render_entry_form re-applies
+    them defensively at the top of its body when example_mode is True. The
+    callback write here is the ideal path; the defensive write in
+    render_entry_form is the guaranteed-to-work fallback for environments
+    where callback writes to widget keys don't propagate cleanly. Either
+    way the widgets see the correct values.
     """
+    # Path 1: callback-time write of the seven widget keys
+    _apply_example_state_to_session()
+
     case = st.session_state.current_case
     expected = case["expected"]
-
-    # Pre-populate the seven input session keys so the form shows them on rerun
-    st.session_state["in_drug"] = expected["drug_name"]
-    st.session_state["in_strength"] = expected["strength"]
-    st.session_state["in_quantity"] = str(expected["quantity"])
-    st.session_state["in_sig"] = expected.get("sig_english", "")
-    st.session_state["in_days"] = str(expected["days_supply"])
-    st.session_state["in_refills"] = str(expected["refills"])
-    st.session_state["in_daw"] = str(expected["daw"])
 
     # Run the checker on those (perfect) answers to produce a feedback dict
     user_answers = {
@@ -2312,6 +2344,23 @@ def render_sig_help() -> None:
 
 def render_entry_form() -> dict | None:
     """Render the entry form. Returns user answers if Check Entry was clicked."""
+
+    # DEFENSIVE EXAMPLE FILL - the guaranteed-to-work path:
+    # If example_mode is True, force the seven widget session_state keys to
+    # the current case's canonical answers IMMEDIATELY before the widgets
+    # are created. Streamlit reads st.session_state[key] when each widget
+    # binds its initial value, so writes that happen in the same script
+    # run BEFORE the widget instantiation are guaranteed to be displayed
+    # by the widget. This is the bulletproof path that doesn't depend on
+    # any on_click->rerun->widget-binding propagation timing.
+    #
+    # The on_click callback (show_example) also writes these keys for the
+    # ideal path; this block here catches the case where that propagation
+    # fails on deployed Streamlit Cloud servers. Either path alone would
+    # work in most environments; together they're bulletproof.
+    if st.session_state.get("example_mode", False):
+        _apply_example_state_to_session()
+
     with st.container(border=True):
         st.markdown(
             '<div class="section-label" style="margin: 6px 0 4px 0;">'
