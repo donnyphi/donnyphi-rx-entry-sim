@@ -1709,20 +1709,26 @@ def _form_key(field: str) -> str:
 
 
 def _bump_form_revision() -> None:
-    """Increment form_widget_revision and clean up the prior revision's
-    session_state keys so they don't accumulate.
+    """Increment form_widget_revision so the next render instantiates
+    fresh form widget objects with new keys.
 
     After this call, every _form_key() returns a key that Streamlit has
-    not yet seen, so the next render instantiates fresh widget objects
-    that read their initial values from st.session_state[new_key] if it
-    has been pre-set, or display blank otherwise.
+    not yet seen, so the next render creates new widget objects that
+    read their initial values from st.session_state[new_key] if it has
+    been pre-set, or display blank otherwise.
+
+    NOTE: This used to also delete the prior revision's session_state
+    entries to keep state tidy. That was removed because on Streamlit
+    Cloud, deleting a session_state key that is currently bound to a
+    live widget (which happens on the very first See Example click in a
+    fresh session, when the widget at in_drug_0 has just rendered) can
+    leave widget state inconsistent and prevent the revision bump from
+    taking effect. The few extra orphaned keys are a trivial memory
+    cost compared to the bug they prevent.
     """
-    old_rev = st.session_state.get("form_widget_revision", 0)
-    for field in FORM_FIELDS:
-        old_key = f"in_{field}_{old_rev}"
-        if old_key in st.session_state:
-            del st.session_state[old_key]
-    st.session_state.form_widget_revision = old_rev + 1
+    st.session_state.form_widget_revision = (
+        st.session_state.get("form_widget_revision", 0) + 1
+    )
 
 
 def advance_case() -> None:
@@ -1820,34 +1826,40 @@ def _apply_example_state_to_session() -> None:
     st.session_state[_form_key("daw")] = str(expected["daw"])
 
 
-def show_example() -> None:
-    """Pre-fill the form with the correct answers and mark the case as
-    submitted in example mode.
+def _process_pending_show_example() -> None:
+    """Apply the See Example action to session state.
 
-    For onboarding: lets a new user see what a completed entry looks
-    like plus the full validation + label preview output, without
-    affecting stats or the missed-fields list.
+    Called from the SCRIPT BODY (not from a callback) at the top of
+    render_prescription_entry_section, before any form widgets render.
+    Runs only when the `_show_example_pending` flag has been set, then
+    clears the flag.
 
-    Implementation: bump the form widget revision FIRST so the seven
-    widgets will reinstantiate with fresh keys on the next render, then
-    pre-write those new keys with the canonical answers. When the next
-    render runs, Streamlit creates new widget objects for keys it has
-    not seen before and reads their initial values from session_state.
+    Why this two-phase pattern (callback sets flag → script body does
+    work): on Streamlit Cloud fresh sessions, session_state writes from
+    inside on_click callbacks have been observed not to persist
+    reliably into the subsequent script rerun (widgets that should pick
+    up new values from session_state stay blank). Doing the writes in
+    the script body itself — same script run that creates the widgets,
+    in code that runs before the widget creation — is guaranteed by
+    Streamlit's documented behavior to be picked up by widget binding.
 
-    Why the revision approach: Streamlit Cloud has shown that writing to
-    an existing widget's session_state key (from a callback or from the
-    same script run, before the widget renders) does not always re-bind
-    the widget's displayed value. Dynamic keys sidestep this by making
-    each refresh a brand-new widget instance.
+    This function combined with the dynamic widget keys (form_widget_
+    revision + _form_key) gives the bulletproof path: revision-bumped
+    keys mean fresh widget instances, and writes happen in the right
+    script context to actually persist.
     """
+    if not st.session_state.pop("_show_example_pending", False):
+        return
+
+    # Bump revision so the form widgets get fresh keys on this render
     _bump_form_revision()
+    # Pre-write the new revision keys with the canonical answers
     _apply_example_state_to_session()
 
     case = st.session_state.current_case
     expected = case["expected"]
 
-    # Build a perfect-feedback dict by running the checker on the
-    # canonical answers
+    # Build a perfect-feedback dict by running the checker
     user_answers = {
         "drug_name": expected["drug_name"],
         "strength": expected["strength"],
@@ -1864,6 +1876,21 @@ def show_example() -> None:
     st.session_state.label_revealed = False
     st.session_state.example_mode = True
     # Stats and missed-fields queue are intentionally NOT touched.
+
+
+def show_example() -> None:
+    """The on_click callback for the See Example button.
+
+    Intentionally minimal: just sets a pending flag. The actual work
+    (bumping the form revision, writing the canonical answers to the
+    new revision's keys, setting feedback and example_mode) happens in
+    _process_pending_show_example, which is called from the script
+    body in render_prescription_entry_section.
+
+    See _process_pending_show_example for why this two-phase approach
+    is necessary on Streamlit Cloud.
+    """
+    st.session_state["_show_example_pending"] = True
 
 
 def overall_accuracy() -> tuple[int, int]:
@@ -2913,7 +2940,25 @@ def render_top_nav() -> None:
 
 def render_prescription_entry_section() -> None:
     """The prescription-entry simulator workflow (was the body of main)."""
+    # FIRST: process any pending See Example request. This MUST run before
+    # any widgets are rendered. The on_click=show_example callback only
+    # sets a flag (_show_example_pending); the actual work happens here
+    # in the script body, which guarantees the session_state writes
+    # persist into widget binding on Streamlit Cloud fresh sessions.
+    _process_pending_show_example()
+
     case = st.session_state.current_case
+
+    # Invisible build marker for deployment verification. Inspect page
+    # source in dev tools and look for data-build="dyn-keys-v4" to
+    # confirm this exact code is what's running. No visible UI impact.
+    st.markdown(
+        '<div data-build="dyn-keys-v4" '
+        f'data-form-rev="{st.session_state.get("form_widget_revision", 0)}" '
+        f'data-example-mode="{st.session_state.get("example_mode", False)}" '
+        'style="display:none;"></div>',
+        unsafe_allow_html=True,
+    )
 
     st.markdown(
         '<div class="workflow-hint">'
