@@ -629,6 +629,16 @@ CUSTOM_CSS = """
 #MainMenu                           { display: none; }
 footer                              { display: none; }
 
+/* ---------- Force light palette ----------
+   Lock color-scheme to light so Chrome's Auto Dark Mode for Web
+   Contents (enabled by default in some recent Chrome incognito
+   profiles) cannot invert backgrounds, swallow container borders,
+   or render disabled-input text the same color as its background.
+   This is the root cause of the symptom where the app looked
+   different in incognito vs the owner browser. */
+:root                                { color-scheme: light; }
+html, body, .stApp                   { color-scheme: light; }
+
 /* ---------- Page baseline ---------- */
 .stApp {
     background-color: #f6f7f9;
@@ -1344,6 +1354,71 @@ span.see-example-link {
     color: #075985;
 }
 
+/* ---------- Canonical answer panel (See Example) ----------
+   Pure HTML rendered by render_example_answers_panel. Replaces the
+   prior approach of filling form widgets with the example values,
+   which proved fragile across browsers and Streamlit Cloud sessions.
+   Static HTML works everywhere. */
+.example-answer-panel {
+    background: #f0fdfa;
+    border: 1px solid #5eead4;
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 10px 0 14px 0;
+    color-scheme: light;
+}
+.example-answer-title {
+    font-size: 0.72rem;
+    color: #0f766e;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+}
+.example-answer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 22px;
+    margin-bottom: 10px;
+}
+.example-answer-panel .ea-cell,
+.example-answer-panel .ea-sig-row {
+    min-width: 0;
+}
+.example-answer-panel .ea-sig-row {
+    border-top: 1px dashed #99f6e4;
+    padding-top: 10px;
+    margin-top: 4px;
+}
+.example-answer-panel .ea-label {
+    font-size: 0.7rem;
+    color: #475569 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+.example-answer-panel .ea-value {
+    font-size: 0.92rem;
+    color: #0f172a !important;
+    font-weight: 500;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    word-break: break-word;
+}
+
+/* ---------- Defensive container borders ----------
+   Some Streamlit Cloud / Chrome incognito combinations render
+   st.container(border=True) without a visible border because the
+   default border color matches their inverted background. Pin the
+   border, background, and color-scheme so the box renders the same
+   in every browser session. */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    color-scheme: light;
+}
+
 /* ---------- Label preview action area (button + hint text) ---------- */
 .print-hint-text {
     font-size: 0.84rem;
@@ -1759,18 +1834,18 @@ def advance_case() -> None:
 def try_again() -> None:
     """Return to editing the same case without advancing.
 
-    If the user was in example mode, clear the form so they can type
-    their own answer. Otherwise, keep their typed values so they can
-    fix specific fields without retyping everything.
+    Preserves any values the user has typed. Earlier versions wiped the
+    form when leaving example mode, but that punished users who typed
+    most fields and then peeked at See Example to check one. The user's
+    typed values live under in_* keys and were never displayed during
+    example mode (the answer panel is separate static HTML), so they're
+    safely held in session_state and reappear in the form on the next
+    render.
     """
-    was_example = st.session_state.get("example_mode", False)
     st.session_state.submitted = False
     st.session_state.last_feedback = {}
     st.session_state.label_revealed = False
     st.session_state.example_mode = False
-    if was_example:
-        for key in WIDGET_KEYS:
-            st.session_state.pop(key, None)
 
 
 def reset_session() -> None:
@@ -2318,33 +2393,12 @@ def render_sig_help() -> None:
 def render_entry_form() -> dict | None:
     """Render the entry form. Returns user answers if Check Entry was clicked.
 
-    Renders DIFFERENT widgets based on example_mode:
-
-    Example mode (after See Example click):
-        Widgets render with key=f"ex_{field}_{case_id}", value=<answer>,
-        disabled=True. The value= parameter is the direct, documented way
-        to push a value into a Streamlit widget, and works reliably across
-        all session types (authenticated owner sessions AND anonymous
-        sessions like incognito or other Google accounts). Case-id-suffixed
-        keys ensure Streamlit creates fresh widget instances when the case
-        changes, so the new case's example values display correctly.
-
-    Normal mode (user is typing their own answer):
-        Widgets render with key="in_drug" etc., placeholders, no value=.
-        User input persists across reruns via Streamlit's standard widget
-        state mechanism.
-
-    Why two separate widget sets per field instead of one set with
-    programmatic value-setting: writes to st.session_state[widget_key] do
-    not reliably propagate to widget displayed values for anonymous
-    Streamlit Cloud sessions. Passing value= directly to the widget at
-    render time bypasses that propagation entirely.
+    Always renders normal editable widgets. When example_mode is True, the
+    canonical answers display in a separate static HTML panel rendered by
+    render_example_answers_panel below the form. Static HTML avoids every
+    widget-state and browser-rendering quirk that broke the seven prior
+    attempts to fill the form fields directly.
     """
-    example = st.session_state.get("example_mode", False)
-    case = st.session_state.current_case
-    case_id = case["case_id"]
-    expected = case["expected"] if example else None
-
     with st.container(border=True):
         st.markdown(
             '<div class="section-label" style="margin: 6px 0 4px 0;">'
@@ -2360,33 +2414,17 @@ def render_entry_form() -> dict | None:
         )
         c1, c2 = st.columns([1, 1])
         with c1:
-            if example:
-                drug = st.text_input(
-                    "Drug name",
-                    value=str(expected["drug_name"]),
-                    disabled=True,
-                    key=f"ex_drug_{case_id}",
-                )
-            else:
-                drug = st.text_input(
-                    "Drug name",
-                    key="in_drug",
-                    placeholder="Generic name",
-                )
+            drug = st.text_input(
+                "Drug name",
+                key="in_drug",
+                placeholder="Generic name",
+            )
         with c2:
-            if example:
-                strength = st.text_input(
-                    "Strength",
-                    value=str(expected["strength"]),
-                    disabled=True,
-                    key=f"ex_strength_{case_id}",
-                )
-            else:
-                strength = st.text_input(
-                    "Strength",
-                    key="in_strength",
-                    placeholder="e.g. 500 mg",
-                )
+            strength = st.text_input(
+                "Strength",
+                key="in_strength",
+                placeholder="e.g. 500 mg",
+            )
 
         # Fill Details
         st.markdown(
@@ -2395,77 +2433,36 @@ def render_entry_form() -> dict | None:
         )
         c3, c4, c5, c6 = st.columns(4)
         with c3:
-            if example:
-                quantity = st.text_input(
-                    "Quantity",
-                    value=str(expected["quantity"]),
-                    disabled=True,
-                    key=f"ex_quantity_{case_id}",
-                )
-            else:
-                quantity = st.text_input(
-                    "Quantity", key="in_quantity", placeholder="0"
-                )
+            quantity = st.text_input(
+                "Quantity", key="in_quantity", placeholder="0"
+            )
         with c4:
-            if example:
-                days = st.text_input(
-                    "Days supply",
-                    value=str(expected["days_supply"]),
-                    disabled=True,
-                    key=f"ex_days_{case_id}",
-                )
-            else:
-                days = st.text_input(
-                    "Days supply", key="in_days", placeholder="0"
-                )
+            days = st.text_input(
+                "Days supply", key="in_days", placeholder="0"
+            )
         with c5:
-            if example:
-                refills = st.text_input(
-                    "Refills",
-                    value=str(expected["refills"]),
-                    disabled=True,
-                    key=f"ex_refills_{case_id}",
-                )
-            else:
-                refills = st.text_input(
-                    "Refills", key="in_refills", placeholder="0"
-                )
+            refills = st.text_input(
+                "Refills", key="in_refills", placeholder="0"
+            )
         with c6:
-            if example:
-                daw = st.text_input(
-                    "DAW code",
-                    value=str(expected["daw"]),
-                    disabled=True,
-                    key=f"ex_daw_{case_id}",
-                )
-            else:
-                daw = st.text_input(
-                    "DAW code", key="in_daw", placeholder="0"
-                )
+            daw = st.text_input(
+                "DAW code", key="in_daw", placeholder="0"
+            )
 
         # Patient Directions
         st.markdown(
             '<div class="form-group-label">Patient Directions (SIG)</div>',
             unsafe_allow_html=True,
         )
-        if example:
-            sig = st.text_area(
-                "Translate shorthand into plain English",
-                value=str(expected.get("sig_english", "")),
-                disabled=True,
-                key=f"ex_sig_{case_id}",
-                height=110,
-            )
-        else:
-            sig = st.text_area(
-                "Translate shorthand into plain English",
-                key="in_sig",
-                height=110,
-                placeholder=(
-                    "Include verb, quantity, dosage form, route, "
-                    "frequency, and duration when applicable."
-                ),
-            )
+        sig = st.text_area(
+            "Translate shorthand into plain English",
+            key="in_sig",
+            height=110,
+            placeholder=(
+                "Include verb, quantity, dosage form, route, "
+                "frequency, and duration when applicable."
+            ),
+        )
 
         # Action buttons
         st.markdown(
@@ -2613,7 +2610,7 @@ def render_success_card(total: int, example_mode: bool = False) -> None:
         card_class = "section-card success-card example-mode"
         title = "Example shown"
         subtitle = (
-            f"All {total} fields pre-filled with the correct answer. "
+            f"The canonical answer for all {total} fields appears below. "
             "This does not count toward your stats. Click Try Again to "
             "practice on your own, or Next Case to continue."
         )
@@ -2629,6 +2626,49 @@ def render_success_card(total: int, example_mode: bool = False) -> None:
         '</div>'
     )
     st.markdown(html_str, unsafe_allow_html=True)
+
+
+def render_example_answers_panel() -> None:
+    """Display the canonical answers as a static HTML panel.
+
+    Renders only when example_mode is True. Pure HTML rendered through
+    st.markdown, with no widget involvement, so it bypasses every
+    widget-state propagation issue and every browser-CSS rendering
+    quirk (Chrome auto dark mode, incognito CSS overrides, disabled-
+    input color collapsing into background) that broke the seven prior
+    attempts to populate the form fields themselves.
+    """
+    if not st.session_state.get("example_mode", False):
+        return
+    case = st.session_state.current_case
+    expected = case["expected"]
+    fields = [
+        ("Drug name", expected["drug_name"]),
+        ("Strength", expected["strength"]),
+        ("Quantity", expected["quantity"]),
+        ("Days supply", expected["days_supply"]),
+        ("Refills", expected["refills"]),
+        ("DAW code", expected["daw"]),
+    ]
+    grid_cells = "".join(
+        '<div class="ea-cell">'
+        f'<div class="ea-label">{html.escape(label)}</div>'
+        f'<div class="ea-value">{html.escape(str(value))}</div>'
+        '</div>'
+        for label, value in fields
+    )
+    sig_value = html.escape(str(expected.get("sig_english", "")))
+    st.markdown(
+        '<div class="example-answer-panel">'
+        '<div class="example-answer-title">Canonical answer for this case</div>'
+        f'<div class="example-answer-grid">{grid_cells}</div>'
+        '<div class="ea-sig-row">'
+        '<div class="ea-label">SIG (English)</div>'
+        f'<div class="ea-value">{sig_value}</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def render_feedback_details_expander(feedback: dict) -> None:
@@ -2983,6 +3023,7 @@ def render_prescription_entry_section() -> None:
 
         if all_correct:
             render_success_card(total, example_mode=st.session_state.example_mode)
+            render_example_answers_panel()
             render_label_preview(case, feedback)
             render_feedback_details_expander(feedback)
         else:
