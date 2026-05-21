@@ -50,10 +50,11 @@ FIELD_LABELS = {
 
 # =====================================================================
 # Form widget keys
-# Static keys for the seven entry-form widgets. _trigger_example_from_url
-# writes values to these keys via st.session_state before widget render so
-# the inputs display the canonical answers. advance_case clears these keys
-# to blank the form for a new case.
+# Static keys for the seven entry-form widgets. Used when the form is in
+# normal mode (user typing their own answers). In example mode the form
+# uses different keys (ex_drug_<case_id>, etc.) so example values can be
+# passed via the value= parameter directly. advance_case clears these
+# keys to blank the form for a new case.
 # =====================================================================
 WIDGET_KEYS = [
     "in_drug",
@@ -2177,25 +2178,19 @@ def render_prescription_card(case: dict) -> None:
                 '<div class="see-example-anchor"></div>',
                 unsafe_allow_html=True,
             )
-            # See Example is an HTML link (not a Streamlit button) that
-            # navigates to ?example=1. The URL change triggers a Streamlit
-            # rerun; the handler at the top of render_prescription_entry_section
-            # picks up the query param and applies the example values via
-            # script-body writes. This bypasses st.button's on_click chain,
-            # which is unreliable on Streamlit Cloud for anonymous sessions.
-            already_submitted = st.session_state.get("submitted", False)
-            disabled_cls = " see-example-disabled" if already_submitted else ""
-            if already_submitted:
-                link_html = (
-                    f'<span class="see-example-link see-example-disabled">'
-                    f'See Example</span>'
-                )
-            else:
-                link_html = (
-                    f'<a href="?example=1" target="_self" '
-                    f'class="see-example-link">See Example</a>'
-                )
-            st.markdown(link_html, unsafe_allow_html=True)
+            # show_example only sets the example_mode flag (and feedback);
+            # it does NOT write to widget keys. render_entry_form below
+            # renders example-mode widgets with value= directly, which
+            # bypasses session_state widget-key propagation issues that
+            # affect anonymous Streamlit Cloud sessions.
+            st.button(
+                "See Example",
+                type="secondary",
+                key="see_example_btn",
+                use_container_width=True,
+                disabled=st.session_state.get("submitted", False),
+                on_click=show_example,
+            )
 
         # Sig row
         st.markdown(
@@ -2323,15 +2318,33 @@ def render_sig_help() -> None:
 def render_entry_form() -> dict | None:
     """Render the entry form. Returns user answers if Check Entry was clicked.
 
-    Uses static widget keys (in_drug, in_strength, etc.). The seven widgets
-    display whatever is currently in session_state for those keys, which is
-    either:
-      - blank (fresh session or after advance_case clears the form)
-      - the user's typed values (Streamlit auto-populates session_state on
-        every keystroke for widgets with keys)
-      - the canonical answers (_trigger_example_from_url writes them
-        before widget render when ?example=1 is in the URL)
+    Renders DIFFERENT widgets based on example_mode:
+
+    Example mode (after See Example click):
+        Widgets render with key=f"ex_{field}_{case_id}", value=<answer>,
+        disabled=True. The value= parameter is the direct, documented way
+        to push a value into a Streamlit widget, and works reliably across
+        all session types (authenticated owner sessions AND anonymous
+        sessions like incognito or other Google accounts). Case-id-suffixed
+        keys ensure Streamlit creates fresh widget instances when the case
+        changes, so the new case's example values display correctly.
+
+    Normal mode (user is typing their own answer):
+        Widgets render with key="in_drug" etc., placeholders, no value=.
+        User input persists across reruns via Streamlit's standard widget
+        state mechanism.
+
+    Why two separate widget sets per field instead of one set with
+    programmatic value-setting: writes to st.session_state[widget_key] do
+    not reliably propagate to widget displayed values for anonymous
+    Streamlit Cloud sessions. Passing value= directly to the widget at
+    render time bypasses that propagation entirely.
     """
+    example = st.session_state.get("example_mode", False)
+    case = st.session_state.current_case
+    case_id = case["case_id"]
+    expected = case["expected"] if example else None
+
     with st.container(border=True):
         st.markdown(
             '<div class="section-label" style="margin: 6px 0 4px 0;">'
@@ -2347,17 +2360,33 @@ def render_entry_form() -> dict | None:
         )
         c1, c2 = st.columns([1, 1])
         with c1:
-            drug = st.text_input(
-                "Drug name",
-                key="in_drug",
-                placeholder="Generic name",
-            )
+            if example:
+                drug = st.text_input(
+                    "Drug name",
+                    value=str(expected["drug_name"]),
+                    disabled=True,
+                    key=f"ex_drug_{case_id}",
+                )
+            else:
+                drug = st.text_input(
+                    "Drug name",
+                    key="in_drug",
+                    placeholder="Generic name",
+                )
         with c2:
-            strength = st.text_input(
-                "Strength",
-                key="in_strength",
-                placeholder="e.g. 500 mg",
-            )
+            if example:
+                strength = st.text_input(
+                    "Strength",
+                    value=str(expected["strength"]),
+                    disabled=True,
+                    key=f"ex_strength_{case_id}",
+                )
+            else:
+                strength = st.text_input(
+                    "Strength",
+                    key="in_strength",
+                    placeholder="e.g. 500 mg",
+                )
 
         # Fill Details
         st.markdown(
@@ -2366,36 +2395,77 @@ def render_entry_form() -> dict | None:
         )
         c3, c4, c5, c6 = st.columns(4)
         with c3:
-            quantity = st.text_input(
-                "Quantity", key="in_quantity", placeholder="0"
-            )
+            if example:
+                quantity = st.text_input(
+                    "Quantity",
+                    value=str(expected["quantity"]),
+                    disabled=True,
+                    key=f"ex_quantity_{case_id}",
+                )
+            else:
+                quantity = st.text_input(
+                    "Quantity", key="in_quantity", placeholder="0"
+                )
         with c4:
-            days = st.text_input(
-                "Days supply", key="in_days", placeholder="0"
-            )
+            if example:
+                days = st.text_input(
+                    "Days supply",
+                    value=str(expected["days_supply"]),
+                    disabled=True,
+                    key=f"ex_days_{case_id}",
+                )
+            else:
+                days = st.text_input(
+                    "Days supply", key="in_days", placeholder="0"
+                )
         with c5:
-            refills = st.text_input(
-                "Refills", key="in_refills", placeholder="0"
-            )
+            if example:
+                refills = st.text_input(
+                    "Refills",
+                    value=str(expected["refills"]),
+                    disabled=True,
+                    key=f"ex_refills_{case_id}",
+                )
+            else:
+                refills = st.text_input(
+                    "Refills", key="in_refills", placeholder="0"
+                )
         with c6:
-            daw = st.text_input(
-                "DAW code", key="in_daw", placeholder="0"
-            )
+            if example:
+                daw = st.text_input(
+                    "DAW code",
+                    value=str(expected["daw"]),
+                    disabled=True,
+                    key=f"ex_daw_{case_id}",
+                )
+            else:
+                daw = st.text_input(
+                    "DAW code", key="in_daw", placeholder="0"
+                )
 
         # Patient Directions
         st.markdown(
             '<div class="form-group-label">Patient Directions (SIG)</div>',
             unsafe_allow_html=True,
         )
-        sig = st.text_area(
-            "Translate shorthand into plain English",
-            key="in_sig",
-            height=110,
-            placeholder=(
-                "Include verb, quantity, dosage form, route, "
-                "frequency, and duration when applicable."
-            ),
-        )
+        if example:
+            sig = st.text_area(
+                "Translate shorthand into plain English",
+                value=str(expected.get("sig_english", "")),
+                disabled=True,
+                key=f"ex_sig_{case_id}",
+                height=110,
+            )
+        else:
+            sig = st.text_area(
+                "Translate shorthand into plain English",
+                key="in_sig",
+                height=110,
+                placeholder=(
+                    "Include verb, quantity, dosage form, route, "
+                    "frequency, and duration when applicable."
+                ),
+            )
 
         # Action buttons
         st.markdown(
@@ -2842,29 +2912,19 @@ def render_top_nav() -> None:
 # Wraps the existing simulator workflow. No logic change.
 # =====================================================================
 
-def _trigger_example_from_url() -> None:
-    """Apply the example answers to widget session_state and set flags.
+def show_example() -> None:
+    """The on_click callback for the See Example button.
 
-    Called from the SCRIPT BODY (not from a callback) when a ?example=1
-    query parameter is detected in the URL. This URL-based trigger
-    bypasses the on_click callback chain, which is unreliable on
-    Streamlit Cloud for anonymous (non-logged-in) sessions. Writes
-    happen in the script body before widgets render, which is the most
-    reliable Streamlit pattern for widget state binding.
+    Sets feedback + flags only. Does NOT write to widget session_state keys
+    (in_drug, in_strength, etc.) because those writes fail to propagate for
+    anonymous Streamlit Cloud sessions. Instead, render_entry_form renders
+    different widgets when example_mode is True, with the canonical answers
+    passed directly via the value= parameter (which bypasses session_state
+    entirely and always works).
     """
     case = st.session_state.current_case
     expected = case["expected"]
 
-    # Write the seven widget values
-    st.session_state["in_drug"] = str(expected["drug_name"])
-    st.session_state["in_strength"] = str(expected["strength"])
-    st.session_state["in_quantity"] = str(expected["quantity"])
-    st.session_state["in_sig"] = str(expected.get("sig_english", ""))
-    st.session_state["in_days"] = str(expected["days_supply"])
-    st.session_state["in_refills"] = str(expected["refills"])
-    st.session_state["in_daw"] = str(expected["daw"])
-
-    # Build perfect feedback
     user_answers = {
         "drug_name": expected["drug_name"],
         "strength": expected["strength"],
@@ -2881,24 +2941,9 @@ def _trigger_example_from_url() -> None:
     st.session_state.label_revealed = False
     st.session_state.example_mode = True
 
-    # Clear the URL param so a page refresh does not re-trigger this.
-    # Clearing query params triggers a Streamlit rerun, but the session_state
-    # writes above persist into the next run.
-    try:
-        del st.query_params["example"]
-    except KeyError:
-        pass
-
 
 def render_prescription_entry_section() -> None:
     """The prescription-entry simulator workflow (was the body of main)."""
-    # FIRST: check if the See Example URL trigger fired. The button itself
-    # is an HTML link to ?example=1, not a Streamlit button, because
-    # Streamlit's on_click callback is unreliable for anonymous sessions
-    # on Streamlit Cloud. URL state survives every session-handling quirk.
-    if "example" in st.query_params:
-        _trigger_example_from_url()
-
     case = st.session_state.current_case
 
     st.markdown(
