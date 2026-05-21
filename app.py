@@ -3216,6 +3216,7 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
+    st.caption("Build: see-example-fix-v3")
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
     init_state()
