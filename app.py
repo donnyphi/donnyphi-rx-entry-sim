@@ -1701,16 +1701,30 @@ def advance_case() -> None:
 def try_again() -> None:
     """Return to editing the same case without advancing.
 
-    Inputs are intentionally NOT cleared so the user can fix what was wrong.
-    Stats and missed-fields entries from the prior submission remain (each
-    Check Entry counts as a real attempt), but handle_submission dedupes
-    missed fields per case so retrying does not pile duplicates. Exits
-    example mode if it was active.
+    Behavior depends on whether the user was in example mode:
+
+    - Coming OUT of example mode (the form was filled with the canonical
+      answer by show_example): clear the seven INPUT_KEYS so the user can
+      type their own answer from scratch on the same case. Without this,
+      the form would stay pre-filled with the correct answers and Try
+      Again would not actually let them practice.
+
+    - Otherwise (the user submitted their own answer and got something
+      wrong): keep the inputs so the user can fix what was wrong without
+      retyping the correct fields. Stats and missed-fields entries from
+      the prior submission remain (each Check Entry counts as a real
+      attempt), but handle_submission dedupes missed fields per case so
+      retrying does not pile duplicates.
     """
+    was_example = st.session_state.get("example_mode", False)
     st.session_state.submitted = False
     st.session_state.last_feedback = {}
     st.session_state.label_revealed = False
     st.session_state.example_mode = False
+    if was_example:
+        for k in INPUT_KEYS:
+            if k in st.session_state:
+                del st.session_state[k]
 
 
 def reset_session() -> None:
@@ -2157,15 +2171,21 @@ def render_prescription_card(case: dict) -> None:
                 '<div class="see-example-anchor"></div>',
                 unsafe_allow_html=True,
             )
-            if st.button(
+            # on_click callback runs BEFORE widget binding on the next
+            # script run, so the seven INPUT_KEYS that show_example writes
+            # are already in session_state when the form widgets in
+            # render_entry_form bind their initial values. Using the older
+            # `if st.button(...): show_example(); st.rerun()` pattern here
+            # is fragile because the button is rendered earlier in the
+            # script flow than the widgets it needs to fill in.
+            st.button(
                 "See Example",
                 type="secondary",
                 key="see_example_btn",
                 use_container_width=True,
                 disabled=st.session_state.get("submitted", False),
-            ):
-                show_example()
-                st.rerun()
+                on_click=show_example,
+            )
 
         # Sig row
         st.markdown(
