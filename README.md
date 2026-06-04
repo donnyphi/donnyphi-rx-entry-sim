@@ -6,7 +6,7 @@ A Streamlit simulator that helps pharmacy technician students practice prescript
 
 https://donnyphi-rx-lab.streamlit.app/
 
-## Screenshot
+## Dashboard
 
 ![Rx Entry Simulator screenshot](assets/rx-entry-dashboard.png)
 
