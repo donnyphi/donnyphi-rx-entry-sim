@@ -792,6 +792,100 @@ html, body, .stApp                   { color-scheme: light; }
 .rx-tag-value { font-size: 0.95rem; font-weight: 600; color: #111827; }
 .rx-tag-value.muted { color: #9ca3af; font-weight: 500; }
 
+/* ---------- DUR / Safety Review ---------- */
+.safety-warning-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.safety-callout {
+    border: 1px solid #e5e7eb;
+    border-left-width: 4px;
+    border-radius: 6px;
+    padding: 10px 14px;
+    background: #f9fafb;
+}
+
+.safety-callout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+    flex-wrap: wrap;
+}
+
+.safety-callout-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.safety-callout-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 3px 9px;
+    background: white;
+    border: 1px solid currentColor;
+}
+
+.safety-callout-body {
+    font-size: 0.86rem;
+    color: #374151;
+    line-height: 1.55;
+}
+
+.safety-callout.safety {
+    background: #fffbeb;
+    border-color: #fbbf24;
+}
+
+.safety-callout.safety .safety-callout-badge {
+    color: #92400e;
+}
+
+.safety-callout.insurance {
+    background: #f0f9ff;
+    border-color: #38bdf8;
+}
+
+.safety-callout.insurance .safety-callout-badge {
+    color: #0369a1;
+}
+
+.safety-callout.drug {
+    background: #f0fdf4;
+    border-color: #34d399;
+}
+
+.safety-callout.drug .safety-callout-badge {
+    color: #047857;
+}
+
+.safety-callout.training {
+    background: #f5f3ff;
+    border-color: #a78bfa;
+}
+
+.safety-callout.training .safety-callout-badge {
+    color: #6d28d9;
+}
+
+.safety-empty-state {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #34d399;
+    border-radius: 6px;
+    padding: 11px 14px;
+    font-size: 0.88rem;
+    color: #166534;
+    line-height: 1.5;
+}
+
 /* ---------- Patient / Prescriber cards ---------- */
 .data-grid {
     display: grid;
@@ -1430,7 +1524,7 @@ span.see-example-link {
 
    1. Each bordered container has a <div class="card-border-anchor"></div>
       inserted as its first child (see render_prescription_card,
-      render_entry_form, render_drug_knowledge_section,
+      render_safety_warnings, render_entry_form, render_drug_knowledge_section,
       render_workflow_scenarios_section).
    2. The :has() selector finds every stVerticalBlock that contains the
       anchor as a descendant.
@@ -1998,6 +2092,499 @@ def decode_sig(sig_shorthand: str) -> list[tuple[str, str]]:
 
 
 # =====================================================================
+# DUR / Safety Review helpers
+# =====================================================================
+
+SAFETY_META = {
+    "allergy": ("Allergy warning", "⚠️ Safety warning", "safety"),
+    "interaction": ("Drug interaction warning", "⚠️ Safety warning", "safety"),
+    "duplicate": ("Duplicate therapy warning", "💊 Drug verification", "drug"),
+    "refill": ("Refill review", "🧾 Insurance / refill issue", "insurance"),
+    "lasa": ("LASA warning", "💊 Drug verification", "drug"),
+    "high_alert": ("High-alert medication", "⚠️ Safety warning", "safety"),
+    "clarification": ("Prescriber clarification needed", "🧠 Training note", "training"),
+    "daw": ("DAW verification", "💊 Drug verification", "drug"),
+    "training": ("Training note", "🧠 Training note", "training"),
+}
+
+HIGH_ALERT_DRUG_GROUPS = {
+    "insulin": ("insulin",),
+    "warfarin": ("warfarin", "coumadin", "jantoven"),
+    "opioid": (
+        "opioid",
+        "codeine",
+        "fentanyl",
+        "hydrocodone",
+        "hydromorphone",
+        "morphine",
+        "oxycodone",
+        "tramadol",
+    ),
+    "methotrexate": ("methotrexate",),
+    "digoxin": ("digoxin",),
+    "enoxaparin": ("enoxaparin", "lovenox"),
+}
+
+ALLERGY_RELATED_TERMS = {
+    "penicillin": (
+        "amoxicillin",
+        "amoxil",
+        "ampicillin",
+        "augmentin",
+        "cephalexin",
+        "cefazolin",
+        "cef",
+        "keflex",
+        "penicillin",
+    ),
+    "sulfa": (
+        "bactrim",
+        "celecoxib",
+        "furosemide",
+        "hydrochlorothiazide",
+        "sulfamethoxazole",
+        "sulfasalazine",
+        "trimethoprim-sulfamethoxazole",
+    ),
+    "aspirin": (
+        "aspirin",
+        "diclofenac",
+        "ibuprofen",
+        "ketorolac",
+        "meloxicam",
+        "naproxen",
+        "nsaid",
+    ),
+    "nsaid": (
+        "aspirin",
+        "diclofenac",
+        "ibuprofen",
+        "ketorolac",
+        "meloxicam",
+        "naproxen",
+        "nsaid",
+    ),
+    "opioid": (
+        "codeine",
+        "hydrocodone",
+        "hydromorphone",
+        "morphine",
+        "oxycodone",
+        "tramadol",
+    ),
+    "codeine": (
+        "codeine",
+        "hydrocodone",
+        "hydromorphone",
+        "morphine",
+        "oxycodone",
+        "tramadol",
+    ),
+    "morphine": (
+        "codeine",
+        "hydrocodone",
+        "hydromorphone",
+        "morphine",
+        "oxycodone",
+        "tramadol",
+    ),
+}
+
+DRUG_CLASS_TERMS = {
+    "NSAID": ("aspirin", "diclofenac", "ibuprofen", "ketorolac", "meloxicam", "naproxen"),
+    "opioid": ("codeine", "fentanyl", "hydrocodone", "morphine", "oxycodone", "tramadol"),
+    "benzodiazepine": ("alprazolam", "clonazepam", "diazepam", "lorazepam"),
+    "SSRI": ("citalopram", "escitalopram", "fluoxetine", "paroxetine", "sertraline"),
+    "statin": ("atorvastatin", "pravastatin", "rosuvastatin", "simvastatin"),
+    "ACE inhibitor": ("benazepril", "enalapril", "lisinopril", "ramipril"),
+    "ARB": ("irbesartan", "losartan", "olmesartan", "valsartan"),
+    "beta blocker": ("atenolol", "metoprolol", "propranolol", "timolol"),
+    "PPI": ("esomeprazole", "lansoprazole", "omeprazole", "pantoprazole"),
+    "anticoagulant": ("apixaban", "dabigatran", "enoxaparin", "rivaroxaban", "warfarin"),
+    "insulin": ("insulin",),
+}
+
+
+def _normalize_safety_type(value: object) -> str:
+    raw = str(value or "").lower().replace("_", " ").replace("-", " ")
+    if "allerg" in raw:
+        return "allergy"
+    if "interact" in raw or "drug drug" in raw or raw == "dur":
+        return "interaction"
+    if "duplicate" in raw or "therapy" in raw:
+        return "duplicate"
+    if "refill" in raw or "insurance" in raw or "too soon" in raw:
+        return "refill"
+    if "lasa" in raw or "look alike" in raw or "sound alike" in raw:
+        return "lasa"
+    if "high" in raw and "alert" in raw:
+        return "high_alert"
+    if "clarif" in raw or "prescriber" in raw or "direction" in raw:
+        return "clarification"
+    if "daw" in raw or "brand medically necessary" in raw:
+        return "daw"
+    return "training"
+
+
+def _add_safety_warning(
+    warnings: list[dict],
+    warning_type: str,
+    message: str,
+    title: str | None = None,
+    badge: str | None = None,
+    tone: str | None = None,
+) -> None:
+    if not message:
+        return
+    normalized_type = _normalize_safety_type(warning_type)
+    default_title, default_badge, default_tone = SAFETY_META[normalized_type]
+    warnings.append(
+        {
+            "type": normalized_type,
+            "title": title or default_title,
+            "badge": badge or default_badge,
+            "tone": tone or default_tone,
+            "message": message,
+        }
+    )
+
+
+def _as_list(value: object) -> list:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return list(value)
+    return [value]
+
+
+def _safe_int(value: object, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    match = re.search(r"\d+", str(value or ""))
+    return int(match.group(0)) if match else default
+
+
+def _case_drug_text(case: dict) -> str:
+    expected = case.get("expected") or {}
+    rx = case.get("rx_text") or {}
+    extras = case.get("extras") or {}
+    return " ".join(
+        str(part)
+        for part in (
+            expected.get("drug_name"),
+            rx.get("drug_line"),
+            " ".join(extras.get("drug_alternates", []))
+            if isinstance(extras.get("drug_alternates"), list)
+            else "",
+        )
+        if part
+    ).lower()
+
+
+def _case_sig_text(case: dict) -> str:
+    expected = case.get("expected") or {}
+    rx = case.get("rx_text") or {}
+    return f'{rx.get("sig_shorthand", "")} {expected.get("sig_english", "")}'.lower()
+
+
+def _patient_medications(case: dict) -> list[str]:
+    patient = case.get("patient") or {}
+    meds: list[str] = []
+    for source in (case, patient):
+        for key in ("medications", "current_medications", "current_meds", "active_meds"):
+            meds.extend(str(item) for item in _as_list(source.get(key)) if item)
+    profile = case.get("profile") or patient.get("profile") or {}
+    if isinstance(profile, dict):
+        for key in ("medications", "current_medications", "current_meds", "active_meds"):
+            meds.extend(str(item) for item in _as_list(profile.get(key)) if item)
+    return meds
+
+
+def _drug_classes(text: str) -> set[str]:
+    normalized = text.lower()
+    return {
+        class_name
+        for class_name, terms in DRUG_CLASS_TERMS.items()
+        if any(term in normalized for term in terms)
+    }
+
+
+def _allergy_is_nkda(allergy: str) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", " ", allergy.lower()).strip()
+    return normalized in {
+        "",
+        "nkda",
+        "nka",
+        "none",
+        "no known allergies",
+        "no known drug allergies",
+    }
+
+
+def _allergy_matches_drug(allergy: str, drug_text: str) -> bool:
+    normalized_allergy = allergy.lower()
+    simple_allergy = re.sub(
+        r"\b(allergy|allergic|drugs?|medications?)\b",
+        "",
+        normalized_allergy,
+    ).strip()
+    if simple_allergy and simple_allergy in drug_text:
+        return True
+    for allergy_key, related_terms in ALLERGY_RELATED_TERMS.items():
+        if allergy_key in normalized_allergy and any(term in drug_text for term in related_terms):
+            return True
+    return False
+
+
+def _collect_explicit_safety_warnings(case: dict, warnings: list[dict]) -> None:
+    def parse_item(item: object, fallback_type: str = "training") -> None:
+        if isinstance(item, dict):
+            if any(key in item for key in ("message", "text", "detail", "description", "title", "type")):
+                warning_type = item.get("type") or item.get("kind") or item.get("category") or fallback_type
+                message = (
+                    item.get("message")
+                    or item.get("text")
+                    or item.get("detail")
+                    or item.get("description")
+                    or ""
+                )
+                if not message and item.get("title"):
+                    message = str(item["title"])
+                _add_safety_warning(
+                    warnings,
+                    str(warning_type),
+                    str(message),
+                    title=str(item["title"]) if item.get("title") else None,
+                    badge=str(item["badge"]) if item.get("badge") else None,
+                    tone=str(item["tone"]) if item.get("tone") else None,
+                )
+            else:
+                for key, value in item.items():
+                    parse_item(value, str(key))
+        elif isinstance(item, (list, tuple, set)):
+            for child in item:
+                parse_item(child, fallback_type)
+        elif isinstance(item, str) and item.strip():
+            _add_safety_warning(warnings, fallback_type, item.strip())
+
+    for key in ("safety_warnings", "dur_warnings", "warnings"):
+        parse_item(case.get(key), key)
+
+    safety = case.get("safety") or case.get("dur") or {}
+    if isinstance(safety, dict):
+        parse_item(safety.get("warnings") if "warnings" in safety else safety, "safety")
+    else:
+        parse_item(safety, "safety")
+
+
+def _collect_allergy_warnings(case: dict, warnings: list[dict], drug_text: str) -> None:
+    patient = case.get("patient") or {}
+    allergies = [str(item).strip() for item in _as_list(patient.get("allergies")) if str(item).strip()]
+    for allergy in allergies:
+        if _allergy_is_nkda(allergy):
+            continue
+        if _allergy_matches_drug(allergy, drug_text):
+            _add_safety_warning(
+                warnings,
+                "allergy",
+                (
+                    f"Patient has a documented {allergy} allergy. "
+                    "Review before dispensing."
+                ),
+            )
+
+
+def _collect_lasa_warnings(warnings: list[dict], drug_text: str) -> None:
+    if "hydralazine" in drug_text or "hydroxyzine" in drug_text:
+        _add_safety_warning(
+            warnings,
+            "lasa",
+            (
+                "Hydralazine and hydroxyzine are commonly confused. "
+                "Verify drug name carefully."
+            ),
+        )
+
+
+def _collect_high_alert_warnings(warnings: list[dict], drug_text: str) -> None:
+    for group_name, terms in HIGH_ALERT_DRUG_GROUPS.items():
+        if any(term in drug_text for term in terms):
+            _add_safety_warning(
+                warnings,
+                "high_alert",
+                (
+                    "Double-check dose, route, and directions before dispensing. "
+                    f"This case involves a high-alert {group_name} medication."
+                ),
+            )
+            return
+
+
+def _collect_refill_and_daw_warnings(case: dict, warnings: list[dict]) -> None:
+    expected = case.get("expected") or {}
+    rx = case.get("rx_text") or {}
+    refills = _safe_int(expected.get("refills", rx.get("refills_text")), default=0)
+    days_supply = _safe_int(expected.get("days_supply"), default=0)
+    daw_text = str(rx.get("daw_text", ""))
+    daw_value = _safe_int(expected.get("daw", daw_text), default=0)
+
+    previous_fill_days_ago = _safe_int(
+        case.get("previous_fill_days_ago")
+        or case.get("days_since_last_fill")
+        or rx.get("previous_fill_days_ago"),
+        default=0,
+    )
+    if previous_fill_days_ago and days_supply and previous_fill_days_ago < days_supply * 0.75:
+        _add_safety_warning(
+            warnings,
+            "refill",
+            (
+                "Refill too soon: Insurance may reject this claim if the patient "
+                "is attempting to refill early."
+            ),
+        )
+    elif refills >= 6:
+        _add_safety_warning(
+            warnings,
+            "refill",
+            (
+                "Refill review: Refills are unusually high for this training case. "
+                "Verify the authorized refills and plan limits before processing."
+            ),
+        )
+    elif days_supply and days_supply <= 14 and refills > 0:
+        _add_safety_warning(
+            warnings,
+            "refill",
+            (
+                "Refill review: Acute or short-course prescriptions with refills "
+                "may need pharmacist or prescriber review."
+            ),
+        )
+
+    if daw_value == 1 or "brand medically necessary" in daw_text.lower():
+        _add_safety_warning(
+            warnings,
+            "daw",
+            (
+                "DAW verification: Brand medically necessary / DAW 1 is indicated. "
+                "Verify the DAW code is entered exactly as written."
+            ),
+        )
+
+
+def _collect_sig_clarity_warnings(case: dict, warnings: list[dict]) -> None:
+    sig_text = _case_sig_text(case)
+    if re.search(r"\bprn\b", sig_text, re.IGNORECASE) or "as needed" in sig_text:
+        _add_safety_warning(
+            warnings,
+            "clarification",
+            (
+                "Directions need clarity: PRN directions should include an indication "
+                "and enough detail to confirm maximum daily use when applicable."
+            ),
+        )
+
+
+def _collect_interaction_and_duplicate_warnings(
+    case: dict,
+    warnings: list[dict],
+    drug_text: str,
+) -> None:
+    current_meds = _patient_medications(case)
+    if not current_meds:
+        return
+
+    drug_classes = _drug_classes(drug_text)
+    for med in current_meds:
+        med_text = med.lower()
+        med_classes = _drug_classes(med_text)
+        shared_classes = sorted(drug_classes & med_classes)
+        if shared_classes:
+            _add_safety_warning(
+                warnings,
+                "duplicate",
+                (
+                    f"Duplicate therapy warning: Patient profile already lists {med}. "
+                    f"Review possible duplicate {shared_classes[0]} therapy."
+                ),
+            )
+            break
+
+    med_profile_text = " ".join(current_meds).lower()
+    interaction_pairs = [
+        (
+            ("ibuprofen", "naproxen", "diclofenac", "ketorolac", "meloxicam", "aspirin"),
+            ("warfarin", "coumadin", "jantoven"),
+            "NSAID plus warfarin can raise bleeding risk. Escalate the DUR alert to the pharmacist.",
+        ),
+        (
+            ("codeine", "fentanyl", "hydrocodone", "morphine", "oxycodone", "tramadol"),
+            ("alprazolam", "clonazepam", "diazepam", "lorazepam"),
+            "Opioids with benzodiazepines can increase sedation and breathing risk. Escalate for pharmacist review.",
+        ),
+        (
+            ("tramadol",),
+            ("citalopram", "escitalopram", "fluoxetine", "paroxetine", "sertraline"),
+            "Tramadol with SSRIs may increase serotonin-related adverse effect risk. Escalate for pharmacist review.",
+        ),
+        (
+            ("lisinopril", "benazepril", "enalapril", "losartan", "valsartan"),
+            ("potassium", "spironolactone"),
+            "ACE inhibitor / ARB therapy with potassium-raising medications may require monitoring review.",
+        ),
+        (
+            ("methotrexate",),
+            ("ibuprofen", "naproxen", "trimethoprim", "sulfamethoxazole", "bactrim"),
+            "Methotrexate has important interaction concerns with several antibiotics and NSAIDs.",
+        ),
+    ]
+    for current_terms, profile_terms, message in interaction_pairs:
+        profile_matches_current = any(term in med_profile_text for term in current_terms)
+        profile_matches_other = any(term in med_profile_text for term in profile_terms)
+        current_matches_current = any(term in drug_text for term in current_terms)
+        current_matches_other = any(term in drug_text for term in profile_terms)
+        if (current_matches_current and profile_matches_other) or (
+            current_matches_other and profile_matches_current
+        ):
+            _add_safety_warning(warnings, "interaction", message)
+            break
+
+
+def _dedupe_safety_warnings(warnings: list[dict]) -> list[dict]:
+    unique: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for warning in warnings:
+        key = (warning.get("type", ""), warning.get("message", ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(warning)
+    return unique
+
+
+def get_safety_warnings(case: dict) -> list[dict]:
+    """Return DUR-style warnings for a case using explicit data plus fallbacks."""
+    warnings: list[dict] = []
+    if not isinstance(case, dict):
+        return warnings
+
+    drug_text = _case_drug_text(case)
+    _collect_explicit_safety_warnings(case, warnings)
+    _collect_allergy_warnings(case, warnings, drug_text)
+    _collect_interaction_and_duplicate_warnings(case, warnings, drug_text)
+    _collect_lasa_warnings(warnings, drug_text)
+    _collect_high_alert_warnings(warnings, drug_text)
+    _collect_refill_and_daw_warnings(case, warnings)
+    _collect_sig_clarity_warnings(case, warnings)
+    return _dedupe_safety_warnings(warnings)
+
+
+# =====================================================================
 # PDF builder using reportlab
 # =====================================================================
 
@@ -2341,6 +2928,54 @@ def render_prescription_card(case: dict) -> None:
             f'<span class="rx-tag-value">{daw_value}</span>'
             '</div>'
             '</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def render_safety_warnings(warnings: list[dict]) -> None:
+    """Render the DUR / Safety Review panel for the current case."""
+    with st.container(border=True):
+        st.markdown(
+            '<div class="card-border-anchor"></div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div class="section-label">DUR / Safety Review</div>',
+            unsafe_allow_html=True,
+        )
+
+        if not warnings:
+            st.markdown(
+                (
+                    '<div class="safety-empty-state">'
+                    'No major safety warnings found for this training case.'
+                    '</div>'
+                ),
+                unsafe_allow_html=True,
+            )
+            return
+
+        callouts = ""
+        allowed_tones = {"safety", "insurance", "drug", "training"}
+        for warning in warnings:
+            tone = str(warning.get("tone", "training"))
+            if tone not in allowed_tones:
+                tone = "training"
+            title = html.escape(str(warning.get("title", "Training note")))
+            badge = html.escape(str(warning.get("badge", "🧠 Training note")))
+            message = html.escape(str(warning.get("message", "")))
+            callouts += (
+                f'<div class="safety-callout {tone}">'
+                '<div class="safety-callout-header">'
+                f'<div class="safety-callout-title">{title}</div>'
+                f'<div class="safety-callout-badge">{badge}</div>'
+                '</div>'
+                f'<div class="safety-callout-body">{message}</div>'
+                '</div>'
+            )
+
+        st.markdown(
+            f'<div class="safety-warning-list">{callouts}</div>',
             unsafe_allow_html=True,
         )
 
@@ -3105,7 +3740,10 @@ def render_prescription_entry_section() -> None:
     # Row 1: prescription source document
     render_prescription_card(case)
 
-    # Row 1b: optional SIG decoder
+    # Row 1b: DUR / safety review
+    render_safety_warnings(get_safety_warnings(case))
+
+    # Row 1c: optional SIG decoder
     render_sig_help()
 
     # Row 2: patient + prescriber
