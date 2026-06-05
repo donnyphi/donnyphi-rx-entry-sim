@@ -783,8 +783,6 @@ html, body, .stApp                   { color-scheme: light; }
     gap: 32px;
     flex-wrap: wrap;
     padding-top: 10px;
-    padding-bottom: 8px;
-    margin-bottom: 6px;
     border-top: 1px solid #f3f4f6;
 }
 
@@ -1008,29 +1006,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     padding: 8px 12px;
     min-height: 110px;
     white-space: pre-wrap;
-}
-
-/* ---------- Radio buttons (st.radio) ----------
-   Streamlit 1.57's default radio option label color renders nearly
-   invisible against a white card background in the Workflow Scenarios
-   section. Pin the option text to a high-contrast dark slate so the
-   answer choices are always readable, regardless of browser theme or
-   color scheme. */
-[data-testid="stRadio"] label,
-[data-testid="stRadio"] label p,
-[data-testid="stRadio"] label div,
-[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p,
-.stRadio label,
-.stRadio label p,
-.stRadio label div {
-    color: #0f172a !important;
-    font-size: 0.9rem !important;
-    line-height: 1.5 !important;
-}
-
-[data-testid="stRadio"] > div,
-.stRadio > div {
-    gap: 6px !important;
 }
 
 /* ---------- Buttons ---------- */
