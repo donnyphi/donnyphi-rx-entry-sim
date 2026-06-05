@@ -1,4 +1,4 @@
-.
+
 """Pure validation functions for prescription-entry fields.
 
 Each check_<field> function returns a uniform dict:
