@@ -1,3 +1,4 @@
+.
 """Session statistics and review-queue helpers.
 
 All functions operate on plain dicts and lists passed in by the caller.
