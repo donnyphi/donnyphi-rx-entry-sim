@@ -484,8 +484,10 @@ DRUG_INFO: dict[str, dict] = {
 
 # =====================================================================
 # Workflow Scenarios - fictional pharmacy workflow decisions
-# Each scenario presents a situation, 3-4 actions, a best action index,
-# and an explanation of the best action.
+# Each scenario presents a situation, patient/case context, 3-4 actions,
+# a best action index, an explanation of the best action, and a reminder
+# of when to escalate the issue to the pharmacist. Training only - not
+# medical or legal advice.
 # =====================================================================
 
 SCENARIOS: list[dict] = [
@@ -498,6 +500,12 @@ SCENARIOS: list[dict] = [
             "was 28 days ago and the plan requires 75% of the prior supply to be "
             "consumed before authorizing another fill."
         ),
+        "context": [
+            ("Patient", "James Reed, 62 (fictional)"),
+            ("Medication", "Amlodipine 5 mg tablet · Qty 90"),
+            ("Last fill", "28 days ago (90-day supply)"),
+            ("Plan rule", "75% of supply used before refill"),
+        ],
         "options": [
             "Process the refill anyway since the patient asked nicely.",
             "Inform the patient the plan considers this refill too soon and provide the next eligible refill date.",
@@ -512,6 +520,12 @@ SCENARIOS: list[dict] = [
             "eligible date so they can plan ahead. Cash pricing is an option only "
             "if the patient requests it after being informed of the timing rule."
         ),
+        "escalation": (
+            "Escalate if the patient says they are out of medication, traveling, or "
+            "had a dose change. A pharmacist can request an early-refill override or "
+            "vacation supply. Technicians explain the timing rule but do not override "
+            "plan limits on their own."
+        ),
     },
     {
         "id": "allergy_warning",
@@ -521,6 +535,12 @@ SCENARIOS: list[dict] = [
             "patient whose profile shows a documented penicillin allergy reported as "
             "'rash.' The pharmacy system flags a cross-reactivity warning."
         ),
+        "context": [
+            ("Patient", "Maria Lopez, 47 (fictional)"),
+            ("New Rx", "Cephalexin 500 mg capsule"),
+            ("Profile", "Penicillin allergy — reported rash"),
+            ("System", "Cross-reactivity alert fired"),
+        ],
         "options": [
             "Fill the prescription without alerting anyone since rash is mild.",
             "Refuse to fill and tell the patient to go to another pharmacy.",
@@ -536,6 +556,12 @@ SCENARIOS: list[dict] = [
             "history and severity before deciding whether to fill, contact the "
             "prescriber, or counsel the patient on the risk."
         ),
+        "escalation": (
+            "Always escalate allergy alerts. Only the pharmacist can judge the "
+            "allergy type and severity and decide whether to fill, call the "
+            "prescriber, or counsel the patient. Technicians never edit or remove "
+            "allergy records."
+        ),
     },
     {
         "id": "prescriber_clarification",
@@ -545,6 +571,12 @@ SCENARIOS: list[dict] = [
             "lisinopril but the strength is illegible. It could be 10 mg or 40 mg. "
             "The directions read 'Take 1 tablet by mouth once daily.'"
         ),
+        "context": [
+            ("Patient", "Edward Kim, 58 (fictional)"),
+            ("Drug", "Lisinopril (strength illegible)"),
+            ("Possible", "10 mg or 40 mg"),
+            ("Directions", "Take 1 tablet by mouth once daily"),
+        ],
         "options": [
             "Pick 10 mg since it is a common starting dose.",
             "Call the prescriber's office to clarify the strength before filling.",
@@ -560,6 +592,12 @@ SCENARIOS: list[dict] = [
             "illegible or ambiguous fields, and document the clarification with the "
             "name of the staff member you spoke with, the date, and the time."
         ),
+        "escalation": (
+            "When any required field is unreadable or ambiguous, the prescriber's "
+            "office must confirm it and the pharmacist verifies the clarification "
+            "before dispensing. Technicians may gather information but do not guess "
+            "critical fields like strength."
+        ),
     },
     {
         "id": "dur_warning",
@@ -570,6 +608,12 @@ SCENARIOS: list[dict] = [
             "(an anticoagulant) two weeks ago. The Drug Utilization Review system "
             "flags a major drug-drug interaction."
         ),
+        "context": [
+            ("Patient", "Susan Park, 71 (fictional)"),
+            ("New Rx", "Ibuprofen 600 mg — twice daily as needed"),
+            ("Profile", "Warfarin dispensed 2 weeks ago"),
+            ("System", "Major interaction (DUR) alert"),
+        ],
         "options": [
             "Dispense the ibuprofen and verbally remind the patient to be careful.",
             "Ignore the warning since DUR alerts fire on many prescriptions.",
@@ -585,6 +629,12 @@ SCENARIOS: list[dict] = [
             "patient on signs of bleeding. Technicians escalate alerts but do not "
             "cancel prescriptions on their own authority."
         ),
+        "escalation": (
+            "Major DUR alerts always go to the pharmacist, who decides whether to "
+            "suggest an alternative, confirm the prescriber is aware, or counsel the "
+            "patient. Technicians escalate the alert and never cancel a prescription "
+            "on their own."
+        ),
     },
     {
         "id": "insurance_rejection",
@@ -594,6 +644,12 @@ SCENARIOS: list[dict] = [
             "code 75 (Prior Authorization Required). The fictional patient is at the "
             "counter waiting to pick up."
         ),
+        "context": [
+            ("Patient", "Tom Walsh, 54 (fictional)"),
+            ("Claim", "Atorvastatin 20 mg"),
+            ("Rejection", "Code 75 — Prior Authorization required"),
+            ("Status", "Patient waiting at the counter"),
+        ],
         "options": [
             "Tell the patient the prescription is denied and to come back later.",
             "Process it as cash and quote the full retail price without other options.",
@@ -609,6 +665,124 @@ SCENARIOS: list[dict] = [
             "wait, a generic substitution if available, or a formulary alternative. "
             "Do not dismiss the patient or default to cash pricing without offering "
             "the PA pathway first."
+        ),
+        "escalation": (
+            "Loop in the pharmacist to start the prior authorization with the "
+            "prescriber and to consider a clinical alternative or bridge supply. "
+            "Technicians can explain the PA process and timing but cannot override a "
+            "plan rejection."
+        ),
+    },
+    {
+        "id": "missing_prescriber_info",
+        "title": "Missing Rx Information",
+        "situation": (
+            "A written fictional prescription for tramadol 50 mg tablet (a Schedule IV "
+            "controlled substance) is dropped off. The drug, strength, quantity, and "
+            "directions are all clear, but the prescriber's DEA number is missing, and "
+            "it is required to process a controlled substance."
+        ),
+        "context": [
+            ("Patient", "Grace Miller, 39 (fictional)"),
+            ("Rx", "Tramadol 50 mg tablet — Schedule IV"),
+            ("Missing", "Prescriber DEA number"),
+            ("Other fields", "Drug, strength, quantity, directions clear"),
+        ],
+        "options": [
+            "Process it anyway since the rest of the prescription is complete.",
+            "Copy a DEA number from another prescriber already on file.",
+            "Hold the prescription and have the prescriber's office provide the missing DEA number for the pharmacist to verify.",
+            "Tell the patient the prescription is invalid and discard it.",
+        ],
+        "best_index": 2,
+        "explanation": (
+            "Controlled substance prescriptions require complete prescriber "
+            "information, including a valid DEA number. Missing required fields "
+            "cannot be filled in or guessed by pharmacy staff. The correct step is to "
+            "contact the prescriber's office for the missing detail; the pharmacist "
+            "verifies the DEA number and confirms the prescription is valid before "
+            "dispensing. The prescription is held pending clarification, not "
+            "discarded."
+        ),
+        "escalation": (
+            "Any missing or invalid required field — especially a DEA number on a "
+            "controlled substance — goes to the pharmacist, who confirms the "
+            "corrected information and whether the prescription can be filled. "
+            "Technicians collect the missing detail but never supply or assume it."
+        ),
+    },
+    {
+        "id": "daw_substitution",
+        "title": "Brand / Generic (DAW)",
+        "situation": (
+            "A fictional prescription is written for the brand Synthroid 100 mcg with "
+            "no DAW code marked. The patient says their doctor told them to take the "
+            "brand and they do not want the generic levothyroxine."
+        ),
+        "context": [
+            ("Patient", "Linda Hayes, 63 (fictional)"),
+            ("Rx", "Synthroid 100 mcg (brand) — no DAW marked"),
+            ("Patient request", "Wants brand, not generic levothyroxine"),
+            ("Question", "Which DAW code applies?"),
+        ],
+        "options": [
+            "Substitute the generic anyway since no DAW was marked.",
+            "Enter DAW 1 (brand medically necessary) on your own since the patient wants brand.",
+            "Confirm the patient's brand request, dispense the brand, and enter DAW 2 (patient requested brand), bringing substitution questions to the pharmacist.",
+            "Refuse to fill until the prescriber sends a brand-only prescription.",
+        ],
+        "best_index": 2,
+        "explanation": (
+            "When no DAW is marked, generic substitution is generally allowed, but a "
+            "patient may request the brand. A patient-requested brand is recorded as "
+            "DAW 2 — not DAW 1, which means the prescriber documented brand medically "
+            "necessary. Technicians do not assign DAW 1 on their own. Confirm the "
+            "request, dispense the brand with DAW 2, and bring substitution or cost "
+            "questions to the pharmacist. A new prescription is not required just to "
+            "honor a brand request."
+        ),
+        "escalation": (
+            "Bring DAW and substitution questions to the pharmacist, especially for "
+            "narrow-therapeutic-index drugs like levothyroxine where brand and "
+            "generic consistency matters. Technicians enter the DAW that matches what "
+            "actually happened; the pharmacist confirms any brand-medically-necessary "
+            "(DAW 1) coding."
+        ),
+    },
+    {
+        "id": "pickup_counseling",
+        "title": "Pickup & Counseling",
+        "situation": (
+            "A fictional patient is picking up a first-fill prescription for a new "
+            "albuterol inhaler. At the register they ask how to use the inhaler "
+            "correctly and whether it is safe with their other medications."
+        ),
+        "context": [
+            ("Patient", "David Cho, 28 (fictional)"),
+            ("Pickup", "New albuterol inhaler (first fill)"),
+            ("Patient asks", "How to use it + drug interactions"),
+            ("Requirement", "Counseling offer on new prescriptions"),
+        ],
+        "options": [
+            "Explain the inhaler technique and interactions yourself to save the pharmacist time.",
+            "Tell the patient to read the printed leaflet and figure it out at home.",
+            "Offer pharmacist counseling and hand the patient off to the pharmacist for the clinical questions.",
+            "Tell the patient the pharmacy cannot answer questions.",
+        ],
+        "best_index": 2,
+        "explanation": (
+            "How to use a medication, side effects, and drug interactions are "
+            "clinical questions for the pharmacist, and an offer to counsel is "
+            "required on new prescriptions. The technician completes the sale and "
+            "hands off the clinical questions. Technicians can confirm name, address, "
+            "and pickup details but do not provide drug-use or interaction advice "
+            "themselves."
+        ),
+        "escalation": (
+            "Any question about how to use a medication, side effects, or "
+            "interactions is a pharmacist counseling task. Offer the counseling and "
+            "route the clinical questions to the pharmacist rather than answering "
+            "them yourself."
         ),
     },
 ]
@@ -1887,6 +2061,48 @@ span.see-example-link {
     color: #6b7280;
     margin-top: 10px;
     font-style: italic;
+}
+
+/* ---------- Workflow Scenarios: case details + pharmacist escalation ---------- */
+.scenario-context {
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 12px 0 4px 0;
+}
+
+.scenario-context-label {
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+/* Purple = the existing "training note" tone; fitting for a scope-of-practice
+   reminder. Distinct from the green/amber correct/incorrect feedback boxes. */
+.scenario-escalation {
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    border-left: 3px solid #a78bfa;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 0.86rem;
+    color: #4b5563;
+    line-height: 1.55;
+}
+
+.scenario-escalation .esc-label {
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #6d28d9;
+    margin-bottom: 4px;
 }
 
 /* ---------- Drug Knowledge nav row ---------- */
@@ -4127,29 +4343,31 @@ def render_workflow_scenarios_section() -> None:
     """
     st.markdown(
         '<div class="info-disclaimer">'
-        '<strong>Training reference only</strong> &middot; all scenarios use '
-        'fictional patients and prescriptions.'
+        '<strong>Training reference only</strong> &middot; not medical or legal '
+        'advice. All scenarios use fictional patients and prescriptions.'
         '</div>',
         unsafe_allow_html=True,
     )
 
-    # ---- Scenario picker ----
+    # ---- Scenario picker (rows of up to 4 so longer titles stay readable) ----
     active_id = st.session_state.get("scenario_id", SCENARIOS[0]["id"])
-    cols = st.columns(len(SCENARIOS))
-    for col, scen in zip(cols, SCENARIOS):
-        with col:
-            btn_type = "primary" if scen["id"] == active_id else "secondary"
-            if st.button(
-                scen["title"],
-                type=btn_type,
-                use_container_width=True,
-                key=f"scen_pick_{scen['id']}",
-            ):
-                if st.session_state.get("scenario_id") != scen["id"]:
-                    st.session_state.scenario_id = scen["id"]
-                    st.session_state.scenario_submitted = False
-                    st.session_state.scenario_choice = None
-                st.rerun()
+    picker_cols = 4
+    for row_start in range(0, len(SCENARIOS), picker_cols):
+        cols = st.columns(picker_cols)
+        for col, scen in zip(cols, SCENARIOS[row_start:row_start + picker_cols]):
+            with col:
+                btn_type = "primary" if scen["id"] == active_id else "secondary"
+                if st.button(
+                    scen["title"],
+                    type=btn_type,
+                    use_container_width=True,
+                    key=f"scen_pick_{scen['id']}",
+                ):
+                    if st.session_state.get("scenario_id") != scen["id"]:
+                        st.session_state.scenario_id = scen["id"]
+                        st.session_state.scenario_submitted = False
+                        st.session_state.scenario_choice = None
+                    st.rerun()
 
     scenario = next(s for s in SCENARIOS if s["id"] == active_id)
     scenario_index = next(
@@ -4185,6 +4403,23 @@ def render_workflow_scenarios_section() -> None:
             f'<div class="scenario-situation">{html.escape(scenario["situation"])}</div>',
             unsafe_allow_html=True,
         )
+
+        # Patient / case context details
+        if scenario.get("context"):
+            context_rows = "".join(
+                '<div class="data-row">'
+                f'<span class="label">{html.escape(str(label))}</span>'
+                f'<span class="value">{html.escape(str(value))}</span>'
+                '</div>'
+                for label, value in scenario["context"]
+            )
+            st.markdown(
+                '<div class="scenario-context">'
+                '<div class="scenario-context-label">Case details</div>'
+                f'<div class="data-grid">{context_rows}</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
         st.markdown(
             '<div class="rx-mini-label" style="margin-top: 14px; '
@@ -4267,6 +4502,16 @@ def render_workflow_scenarios_section() -> None:
                 '<div class="scenario-user-pick">'
                 f'You chose: {html.escape(user_pick_text)}'
                 '</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Pharmacist escalation reminder (shown after both correct and incorrect)
+        if scenario.get("escalation"):
+            st.markdown(
+                '<div class="scenario-escalation">'
+                '<span class="esc-label">When to escalate to the pharmacist</span>'
+                f'{html.escape(scenario["escalation"])}'
                 '</div>',
                 unsafe_allow_html=True,
             )
