@@ -1029,17 +1029,38 @@ html, body, .stApp                   { color-scheme: light; }
 .rx-meta .meta-value { color: #1f2937; font-weight: 500; margin-left: 4px; }
 
 .rx-drug {
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-size: 1.18rem;
+    font-weight: 700;
     color: #111827;
-    margin-bottom: 10px;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+/* Subtle zone labels that make the card read like a structured source
+   document: Medication / Directions / Dispensing details. Each label's
+   top hairline doubles as the divider between zones. */
+.rx-group-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin: 14px 0 8px 0;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.rx-group-label.first {
+    margin-top: 2px;
+    padding-top: 0;
+    border-top: none;
 }
 
 .rx-sig-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 14px;
+    margin-bottom: 2px;
     flex-wrap: wrap;
 }
 
@@ -1053,25 +1074,35 @@ html, body, .stApp                   { color-scheme: light; }
 
 .rx-sig {
     font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     color: #0f766e;
     background: #ecfdf5;
-    padding: 4px 10px;
+    padding: 5px 12px;
     border-radius: 4px;
     border: 1px solid #d1fae5;
     display: inline-block;
 }
 
+/* Dispensing details strip: three connected fields divided by hairlines
+   so Disp / Refills / DAW scan like a real Rx detail row. */
 .rx-tags {
     display: flex;
-    gap: 32px;
     flex-wrap: wrap;
-    padding-top: 10px;
-    border-top: 1px solid #f3f4f6;
+    gap: 0;
 }
 
-.rx-tag { display: flex; flex-direction: column; gap: 2px; }
-.rx-tag-value { font-size: 0.95rem; font-weight: 600; color: #111827; }
+.rx-tag {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 0 22px;
+    min-width: 84px;
+}
+
+.rx-tag:first-child { padding-left: 0; }
+.rx-tag + .rx-tag { border-left: 1px solid #f3f4f6; }
+
+.rx-tag-value { font-size: 0.98rem; font-weight: 600; color: #111827; }
 .rx-tag-value.muted { color: #9ca3af; font-weight: 500; }
 
 /* ---------- DUR / Safety Review ---------- */
@@ -3307,7 +3338,11 @@ def render_prescription_card(case: dict) -> None:
             unsafe_allow_html=True,
         )
 
-        # Drug line + See Example button on the far right of the same row
+        # ---- Medication zone: drug line + See Example button ----
+        st.markdown(
+            '<div class="rx-group-label first">Medication</div>',
+            unsafe_allow_html=True,
+        )
         col_drug, col_btn = st.columns([5, 1.4])
         with col_drug:
             st.markdown(
@@ -3334,16 +3369,24 @@ def render_prescription_card(case: dict) -> None:
                 on_click=show_example,
             )
 
-        # Sig row
+        # ---- Directions zone: the SIG shorthand ----
+        st.markdown(
+            '<div class="rx-group-label">Directions</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             '<div class="rx-sig-row">'
-            '<span class="rx-mini-label">Sig</span>'
+            '<span class="rx-mini-label">SIG</span>'
             f'<span class="rx-sig">{sig_safe}</span>'
             '</div>',
             unsafe_allow_html=True,
         )
 
-        # Tags row
+        # ---- Dispensing details zone: Disp / Refills / DAW strip ----
+        st.markdown(
+            '<div class="rx-group-label">Dispensing details</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             '<div class="rx-tags">'
             '<div class="rx-tag">'
