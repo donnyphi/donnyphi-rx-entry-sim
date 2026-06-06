@@ -169,6 +169,18 @@ DRUG_INFO: dict[str, dict] = {
         ),
         "lasa": "Look-alike / sound-alike with erythromycin and clarithromycin (other macrolides).",
     },
+    "cetirizine": {
+        "generic": "Cetirizine",
+        "brand_examples": ["Zyrtec"],
+        "dosage_forms": ["tablet", "chewable tablet", "orally disintegrating tablet", "oral solution", "capsule"],
+        "category": "Second-generation antihistamine. Training-use category: allergy relief (less sedating).",
+        "counseling": (
+            "Used for sneezing, runny nose, and itchy or watery eyes. Less "
+            "drowsy than older antihistamines but can still cause some "
+            "drowsiness. One dose usually covers 24 hours."
+        ),
+        "lasa": "Look-alike / sound-alike with sertraline by spelling; verify the order carefully.",
+    },
     "cephalexin": {
         "generic": "Cephalexin",
         "brand_examples": ["Keflex"],
@@ -192,6 +204,18 @@ DRUG_INFO: dict[str, dict] = {
             "Report tendon pain."
         ),
         "lasa": "Look-alike / sound-alike with cephalexin and with other fluoroquinolones (levofloxacin, moxifloxacin).",
+    },
+    "clotrimazole": {
+        "generic": "Clotrimazole",
+        "brand_examples": ["Lotrimin", "Mycelex"],
+        "dosage_forms": ["cream", "topical solution", "lozenge (troche)", "vaginal cream"],
+        "category": "Azole antifungal. Training-use category: topical antifungal for skin and yeast infections.",
+        "counseling": (
+            "Apply a thin layer to the affected area, usually twice daily. "
+            "Complete the full course even if the rash clears early. For "
+            "external skin use unless the specific product form says otherwise."
+        ),
+        "lasa": "Look-alike / sound-alike with other '-azole' antifungals such as ketoconazole and miconazole.",
     },
     "clopidogrel": {
         "generic": "Clopidogrel",
@@ -335,6 +359,18 @@ DRUG_INFO: dict[str, dict] = {
             "immediately. Avoid potassium supplements unless directed."
         ),
         "lasa": "Look-alike / sound-alike with fosinopril, enalapril, and other '-pril' ACE inhibitors.",
+    },
+    "loratadine": {
+        "generic": "Loratadine",
+        "brand_examples": ["Claritin"],
+        "dosage_forms": ["tablet", "orally disintegrating tablet", "chewable tablet", "oral solution", "capsule"],
+        "category": "Second-generation antihistamine. Training-use category: non-drowsy allergy relief.",
+        "counseling": (
+            "Used for seasonal and year-round allergy symptoms. Usually "
+            "non-drowsy at the labeled dose. Taken once daily; effects last "
+            "about 24 hours."
+        ),
+        "lasa": "Look-alike / sound-alike with desloratadine and with loratadine-D products (which add the decongestant pseudoephedrine).",
     },
     "losartan": {
         "generic": "Losartan",
@@ -480,6 +516,71 @@ DRUG_INFO: dict[str, dict] = {
         "lasa": "Look-alike / sound-alike with other anticoagulants. Strength tablets are color-coded; verify color matches strength on every fill.",
     },
 }
+
+
+# =====================================================================
+# Drug Knowledge categories
+# Curated, beginner-friendly therapeutic groupings for the Drug Knowledge
+# study section. Each "drugs" list holds DRUG_INFO keys (lowercase generic
+# names). Grouping is for training / reference only, not clinical guidance.
+# =====================================================================
+
+DRUG_CATEGORIES: list[dict] = [
+    {
+        "id": "hypertension",
+        "label": "Hypertension",
+        "blurb": (
+            "Blood-pressure and heart medications. Watch strengths closely and "
+            "learn the '-pril', '-sartan', and '-olol' name endings."
+        ),
+        "drugs": ["lisinopril", "losartan", "amlodipine", "metoprolol", "hydrochlorothiazide"],
+    },
+    {
+        "id": "antibiotics",
+        "label": "Antibiotics",
+        "blurb": (
+            "Anti-infectives. Stress finishing the full course, and always "
+            "check the patient's allergy history before filling."
+        ),
+        "drugs": ["amoxicillin", "azithromycin", "cephalexin", "ciprofloxacin"],
+    },
+    {
+        "id": "diabetes",
+        "label": "Diabetes",
+        "blurb": (
+            "Blood-sugar medications. Insulin names and concentrations are "
+            "high-alert — verify them carefully."
+        ),
+        "drugs": ["metformin", "glipizide", "insulin glargine"],
+    },
+    {
+        "id": "pain",
+        "label": "Pain & fever",
+        "blurb": (
+            "Analgesics and fever reducers. Note NSAID stomach / bleeding "
+            "cautions and the 4 g per day acetaminophen limit."
+        ),
+        "drugs": ["acetaminophen", "ibuprofen", "naproxen", "tramadol"],
+    },
+    {
+        "id": "allergy",
+        "label": "Allergy & asthma",
+        "blurb": (
+            "Antihistamines and inhalers. Keep rescue inhalers separate from "
+            "daily maintenance inhalers."
+        ),
+        "drugs": ["cetirizine", "loratadine", "albuterol", "fluticasone-salmeterol"],
+    },
+    {
+        "id": "topical",
+        "label": "Topical",
+        "blurb": (
+            "Creams and ointments. Apply a thin layer to the affected area and "
+            "mind potency and site cautions."
+        ),
+        "drugs": ["hydrocortisone", "triamcinolone", "clotrimazole"],
+    },
+]
 
 
 # =====================================================================
@@ -1956,20 +2057,6 @@ span.see-example-link {
 }
 
 /* ---------- Drug Knowledge section ---------- */
-.drug-info-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #111827;
-    margin: 4px 0 4px 0;
-}
-
-.drug-info-category {
-    font-size: 0.92rem;
-    color: #4b5563;
-    margin-bottom: 14px;
-    font-style: italic;
-}
-
 .drug-info-section-label {
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -2007,6 +2094,68 @@ span.see-example-link {
     border-radius: 4px;
     line-height: 1.5;
 }
+
+/* ---------- Drug Knowledge study cards ---------- */
+.drug-category-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 16px 0 4px 0;
+}
+
+.drug-category-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.drug-category-count {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.drug-category-blurb {
+    font-size: 0.86rem;
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 0 0 12px 0;
+}
+
+.drug-study-card { margin-bottom: 12px; }
+
+.drug-study-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.drug-study-generic {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.drug-study-brand {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.drug-study-class {
+    font-size: 0.84rem;
+    color: #4b5563;
+    font-style: italic;
+    line-height: 1.45;
+    margin-bottom: 4px;
+}
+
+.drug-study-pills { margin-top: 2px; }
 
 /* ---------- Workflow Scenarios section ---------- */
 .scenario-situation {
@@ -2105,16 +2254,6 @@ span.see-example-link {
     margin-bottom: 4px;
 }
 
-/* ---------- Drug Knowledge nav row ---------- */
-.drug-progress {
-    text-align: center;
-    font-size: 0.92rem;
-    color: #4b5563;
-    font-weight: 500;
-    padding-top: 8px;
-    line-height: 1.4;
-}
-
 /* ---------- Workflow Scenarios progress + score row ---------- */
 .scenario-progress-row {
     display: flex;
@@ -2178,16 +2317,12 @@ def init_state() -> None:
         st.session_state.scenario_submitted = False
     if "scenario_choice" not in st.session_state:
         st.session_state.scenario_choice = None
-    if "drug_knowledge_index" not in st.session_state:
-        # Default to the index of the current Prescription Entry case's drug
-        # in DRUG_INFO so users land on that drug the first time they open
-        # Drug Knowledge. After that, Prev/Next buttons drive it independently.
-        keys = list(DRUG_INFO.keys())
+    if "drug_category" not in st.session_state:
+        # Land on the category that contains the current Prescription Entry
+        # case's drug so Drug Knowledge opens on something relevant. After
+        # that, the category buttons drive it independently.
         current_drug = st.session_state.current_case["expected"]["drug_name"].lower().strip()
-        try:
-            st.session_state.drug_knowledge_index = keys.index(current_drug)
-        except ValueError:
-            st.session_state.drug_knowledge_index = 0
+        st.session_state.drug_category = _category_for_drug(current_drug)
     if "scenario_attempted_ids" not in st.session_state:
         st.session_state.scenario_attempted_ids = set()
     if "scenario_correct_ids" not in st.session_state:
@@ -4211,120 +4346,122 @@ def render_prescription_entry_section() -> None:
 # cases in the simulator updates what this section shows.
 # =====================================================================
 
-def render_drug_knowledge_section() -> None:
-    """Reference card with Prev/Next navigation through all DRUG_INFO entries.
+def _drug_study_card_html(info: dict) -> str:
+    """Build one compact study card for the Drug Knowledge section.
 
-    drug_knowledge_index is independent of current_case after the first
-    initialization; navigation here does not affect Prescription Entry.
-
-    Layout order (as of this revision): disclaimer banner, then the drug
-    reference card, then the Prev / progress / Next navigation row at
-    the bottom. Reading first, then advancing, matches how users actually
-    use the section.
+    Shows generic name, brand (when useful), drug class, dosage forms, a
+    short technician note, and a LASA / safety line when one applies.
+    Reuses the existing .drug-info-* pill / body / lasa styles.
     """
-    keys = list(DRUG_INFO.keys())
-    n = len(keys)
-    current = st.session_state.drug_knowledge_index % n
-    drug_key = keys[current]
-    info = DRUG_INFO[drug_key]
+    if info["brand_examples"]:
+        brand = "Brand: " + ", ".join(info["brand_examples"])
+    else:
+        brand = "Generic only"
 
+    forms_html = "".join(
+        f'<span class="drug-info-pill">{html.escape(form)}</span>'
+        for form in info["dosage_forms"]
+    )
+
+    lasa = info.get("lasa")
+    lasa_html = (
+        '<div class="drug-info-section-label">Safety &middot; LASA</div>'
+        f'<div class="lasa-warning">{html.escape(lasa)}</div>'
+    ) if lasa else ""
+
+    return (
+        '<div class="section-card drug-study-card">'
+        '<div class="drug-study-head">'
+        f'<span class="drug-study-generic">{html.escape(info["generic"])}</span>'
+        f'<span class="drug-study-brand">{html.escape(brand)}</span>'
+        '</div>'
+        f'<div class="drug-study-class">{html.escape(info["category"])}</div>'
+        '<div class="drug-info-section-label">Dosage forms</div>'
+        f'<div class="drug-study-pills">{forms_html}</div>'
+        '<div class="drug-info-section-label">Technician note</div>'
+        f'<div class="drug-info-body">{html.escape(info["counseling"])}</div>'
+        + lasa_html
+        + '</div>'
+    )
+
+
+def _category_for_drug(drug_key: str) -> str:
+    """Return the category id that contains drug_key, else the first category."""
+    for category in DRUG_CATEGORIES:
+        if drug_key in category["drugs"]:
+            return category["id"]
+    return DRUG_CATEGORIES[0]["id"]
+
+
+def render_drug_knowledge_section() -> None:
+    """Categorized drug study cards for pharmacy technician review.
+
+    A row of category buttons filters DRUG_INFO down to a curated,
+    beginner-friendly set per therapeutic area (hypertension, antibiotics,
+    diabetes, pain/fever, allergy/asthma, topical). Each drug renders as a
+    compact study card via _drug_study_card_html. Training / reference
+    content only; the disclaimer banner stays in view. Category selection
+    is independent of the Prescription Entry flow.
+    """
     # ---- Disclaimer banner ----
     st.markdown(
         '<div class="info-disclaimer">'
         '<strong>Training reference only</strong> &middot; not clinical guidance. '
-        'High-yield list based on common pharmacy technician study patterns; '
+        'High-yield study set based on common pharmacy technician patterns; '
         'not an official exam list.'
         '</div>',
         unsafe_allow_html=True,
     )
 
-    # ---- Drug reference card ----
-    with st.container(border=True):
-        # Border marker (see .card-border-anchor rule in CUSTOM_CSS)
-        st.markdown(
-            '<div class="card-border-anchor"></div>',
-            unsafe_allow_html=True,
-        )
-        # Title + category
-        st.markdown(
-            f'<div class="drug-info-title">{html.escape(info["generic"])}</div>'
-            f'<div class="drug-info-category">{html.escape(info["category"])}</div>',
-            unsafe_allow_html=True,
-        )
+    valid_ids = {c["id"] for c in DRUG_CATEGORIES}
+    active_id = st.session_state.get("drug_category", DRUG_CATEGORIES[0]["id"])
+    if active_id not in valid_ids:
+        active_id = DRUG_CATEGORIES[0]["id"]
 
-        # Example brand names
-        st.markdown(
-            '<div class="drug-info-section-label">Example Brand Names</div>',
-            unsafe_allow_html=True,
-        )
-        if info["brand_examples"]:
-            brand_html = "".join(
-                f'<span class="drug-info-pill">{html.escape(b)}</span>'
-                for b in info["brand_examples"]
-            )
-            st.markdown(brand_html, unsafe_allow_html=True)
-        else:
-            st.markdown(
-                '<div class="drug-info-body">Generic only.</div>',
-                unsafe_allow_html=True,
-            )
+    # ---- Category selector ----
+    st.markdown(
+        '<div class="section-label">Study categories</div>',
+        unsafe_allow_html=True,
+    )
+    cols = st.columns(len(DRUG_CATEGORIES))
+    for col, category in zip(cols, DRUG_CATEGORIES):
+        with col:
+            btn_type = "primary" if category["id"] == active_id else "secondary"
+            if st.button(
+                category["label"],
+                type=btn_type,
+                use_container_width=True,
+                key=f"drugcat_{category['id']}",
+            ):
+                st.session_state.drug_category = category["id"]
+                st.rerun()
 
-        # Dosage forms
-        st.markdown(
-            '<div class="drug-info-section-label">Dosage Forms</div>',
-            unsafe_allow_html=True,
-        )
-        forms_html = "".join(
-            f'<span class="drug-info-pill">{html.escape(f)}</span>'
-            for f in info["dosage_forms"]
-        )
-        st.markdown(forms_html, unsafe_allow_html=True)
+    active = next(c for c in DRUG_CATEGORIES if c["id"] == active_id)
+    drugs = [DRUG_INFO[key] for key in active["drugs"] if key in DRUG_INFO]
+    count = len(drugs)
+    plural = "s" if count != 1 else ""
 
-        # Counseling point
-        st.markdown(
-            '<div class="drug-info-section-label">Counseling Point</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f'<div class="drug-info-body">{html.escape(info["counseling"])}</div>',
-            unsafe_allow_html=True,
-        )
+    # ---- Category header + blurb ----
+    st.markdown(
+        f'<div class="drug-category-bar">'
+        f'<span class="drug-category-title">{html.escape(active["label"])}</span>'
+        f'<span class="drug-category-count">{count} drug{plural}</span>'
+        f'</div>'
+        f'<div class="drug-category-blurb">{html.escape(active["blurb"])}</div>',
+        unsafe_allow_html=True,
+    )
 
-        # LASA warning
-        st.markdown(
-            '<div class="drug-info-section-label">Look-Alike / Sound-Alike</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f'<div class="lasa-warning">{html.escape(info["lasa"])}</div>',
-            unsafe_allow_html=True,
-        )
-
-    # ---- Prev / progress / Next navigation row (below the card) ----
-    col_prev, col_progress, col_next = st.columns([1.5, 3, 1.5])
-    with col_prev:
-        if st.button(
-            "\u2190 Previous Drug",
-            use_container_width=True,
-            key="drug_kb_prev",
-        ):
-            st.session_state.drug_knowledge_index = (current - 1) % n
-            st.rerun()
-    with col_progress:
-        st.markdown(
-            f'<div class="drug-progress">'
-            f'Drug {current + 1} of {n} &middot; {html.escape(info["generic"])}'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-    with col_next:
-        if st.button(
-            "Next Drug \u2192",
-            use_container_width=True,
-            key="drug_kb_next",
-        ):
-            st.session_state.drug_knowledge_index = (current + 1) % n
-            st.rerun()
+    # ---- Study cards (two per row) ----
+    for i in range(0, count, 2):
+        left, right = st.columns(2)
+        with left:
+            st.markdown(_drug_study_card_html(drugs[i]), unsafe_allow_html=True)
+        if i + 1 < count:
+            with right:
+                st.markdown(
+                    _drug_study_card_html(drugs[i + 1]),
+                    unsafe_allow_html=True,
+                )
 
 
 # =====================================================================
