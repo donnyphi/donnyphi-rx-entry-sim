@@ -1118,6 +1118,65 @@ span.see-example-link {
     font-weight: 600;
 }
 
+/* ---------- Feedback report summary (score + performance message) ---------- */
+.report-summary {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    border: 1px solid #e5e7eb;
+}
+
+.report-score {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.report-badge {
+    background: white;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 1px 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.report-perf {
+    font-size: 0.86rem;
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+.report-summary.high {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+.report-summary.high .report-score,
+.report-summary.high .report-badge,
+.report-summary.high .report-perf { color: #047857; }
+
+.report-summary.medium {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+.report-summary.medium .report-score,
+.report-summary.medium .report-badge,
+.report-summary.medium .report-perf { color: #92400e; }
+
+.report-summary.low {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+.report-summary.low .report-score,
+.report-summary.low .report-badge,
+.report-summary.low .report-perf { color: #b91c1c; }
+
+/* SIG explanation is the most detailed; give it a touch more breathing room */
+.feedback-item.sig-field .feedback-explanation { margin-top: 8px; }
+
 .feedback-item {
     padding: 10px 14px;
     border-radius: 6px;
@@ -3324,6 +3383,174 @@ def _build_field_details_html(feedback: dict) -> str:
     return items_html
 
 
+def _performance_message(correct: int, total: int) -> tuple[str, str]:
+    """Map a score to a (tone, message) pair for the feedback summary.
+
+    Tones map to the green / amber / red palette used elsewhere:
+        high   (>= ~85%, i.e. 6-7 of 7) -> green
+        medium (>= 50%,  i.e. 4-5 of 7) -> amber
+        low    (< 50%,   i.e. 0-3 of 7) -> red
+    """
+    ratio = (correct / total) if total else 0.0
+    if ratio >= 0.85:
+        return "high", "Great job — ready for a harder case."
+    if ratio >= 0.5:
+        return "medium", "Close — review the missed fields."
+    return "low", "Needs practice — use the example and try again."
+
+
+def _expected_display(field: str, case: dict) -> str:
+    """Human-readable expected value for a field in the feedback report.
+
+    The SIG checker stores a generic descriptor as its "expected" value,
+    so for display we substitute the full plain-English SIG instead.
+    """
+    expected = case["expected"]
+    if field == "sig":
+        return str(expected.get("sig_english", ""))
+    return str(expected.get(field, ""))
+
+
+# DAW code meanings, keyed by the expected integer code. Used to explain
+# why the expected DAW value is correct on a per-case basis.
+_DAW_MEANINGS = {
+    0: "DAW 0 = no product selection indicated; generic substitution is allowed.",
+    1: "DAW 1 = substitution not allowed; the prescriber marked brand medically necessary.",
+    2: "DAW 2 = the patient requested the brand name product.",
+}
+
+
+def _why_explanation(field: str, case: dict) -> str:
+    """Short explanation of why the expected answer is correct for a field.
+
+    These are derived from the case data (expected values, the extras
+    calculation strings, and the SIG decoder) so every field — correct or
+    incorrect — gets a teaching note in the feedback report.
+    """
+    expected = case["expected"]
+    extras = case.get("extras") or {}
+
+    if field == "drug_name":
+        return (
+            f"The prescription is written for {expected['drug_name']}. Enter the "
+            "drug name exactly as written, and watch for generic vs brand names."
+        )
+    if field == "strength":
+        return (
+            f"The strength is {expected['strength']}. Always include both the "
+            "number and the unit (mg, mcg, mL, %, etc.)."
+        )
+    if field == "quantity":
+        base = "Quantity is the total amount dispensed for this fill."
+        calc = extras.get("quantity_calc")
+        return f"{base} {calc}" if calc else base
+    if field == "days_supply":
+        base = (
+            "Days supply = total quantity ÷ number of doses taken per day. "
+            "It tells the insurer how long the fill should last."
+        )
+        calc = extras.get("days_calc")
+        return f"{base} {calc}" if calc else base
+    if field == "refills":
+        return (
+            f"The prescriber authorized {expected['refills']} refill(s). Copy the "
+            "refills line from the prescription exactly — do not add or assume refills."
+        )
+    if field == "daw":
+        return _DAW_MEANINGS.get(
+            expected["daw"],
+            "The DAW (Dispense As Written) code records why a specific product was dispensed.",
+        )
+    if field == "sig":
+        shorthand = case["rx_text"]["sig_shorthand"]
+        english = expected.get("sig_english", "")
+        msg = (
+            f'The shorthand "{shorthand}" translates to "{english}". '
+            "A complete SIG names the action, amount, dosage form, route, "
+            "frequency, and a duration when one is given."
+        )
+        decoded = decode_sig(shorthand)
+        if decoded:
+            pieces = "; ".join(f"{token} = {meaning}" for token, meaning in decoded)
+            msg += f" Piece by piece: {pieces}."
+        return msg
+    return ""
+
+
+def render_feedback_report(case: dict, feedback: dict) -> None:
+    """Detailed pharmacy-tech feedback report shown after Check Entry.
+
+    Renders:
+      * an overall score ("X/7 fields correct"),
+      * a performance message keyed to that score,
+      * one row per field (correct AND incorrect) showing the status, the
+        value entered, the expected answer, and a short explanation of why
+        the expected answer is correct.
+
+    This is intentionally exhaustive (all seven fields, always) so the panel
+    reads like a graded report rather than only flagging mistakes.
+    """
+    if not feedback:
+        return
+
+    total = len(feedback)
+    correct = sum(1 for r in feedback.values() if r["correct"])
+    tone, perf_msg = _performance_message(correct, total)
+
+    summary_html = (
+        f'<div class="report-summary {tone}">'
+        f'<div class="report-score">'
+        f'<span class="report-badge">{correct} / {total}</span>'
+        f'<span>{correct}/{total} fields correct</span>'
+        f'</div>'
+        f'<div class="report-perf">{html.escape(perf_msg)}</div>'
+        f'</div>'
+    )
+
+    items_html = ""
+    for field, res in feedback.items():
+        label = FIELD_LABELS.get(field, field)
+        css_class = "correct" if res["correct"] else "incorrect"
+        if field == "sig":
+            css_class += " sig-field"
+        status_text = "Correct" if res["correct"] else "Incorrect"
+
+        user_value = res["user"]
+        user_safe = (
+            html.escape(str(user_value)) if str(user_value) != "" else "(empty)"
+        )
+        expected_safe = html.escape(_expected_display(field, case))
+        why = _why_explanation(field, case)
+        why_html = (
+            f'<div class="feedback-explanation">{html.escape(why)}</div>'
+            if why
+            else ""
+        )
+
+        items_html += (
+            f'<div class="feedback-item {css_class}">'
+            f'<div class="field-row">'
+            f'<span class="field-name">{html.escape(label)}</span>'
+            f'<span class="field-status">{status_text}</span>'
+            f'</div>'
+            f'<div class="feedback-detail">'
+            f'You entered:<span class="answer-box">{user_safe}</span>'
+            f'&nbsp;&nbsp;Expected:<span class="answer-box">{expected_safe}</span>'
+            f'</div>'
+            f'{why_html}'
+            f'</div>'
+        )
+
+    st.markdown(
+        '<div class="section-card">'
+        '<div class="section-label">Feedback Report</div>'
+        + summary_html
+        + items_html
+        + '</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_feedback() -> None:
     """Render the detailed Validation Results card for the mistakes path.
 
@@ -3745,10 +3972,10 @@ def render_prescription_entry_section() -> None:
 
         if all_correct:
             render_success_card(total, example_mode=st.session_state.example_mode)
+            render_feedback_report(case, feedback)
             render_label_preview(case, feedback)
-            render_feedback_details_expander(feedback)
         else:
-            render_feedback()
+            render_feedback_report(case, feedback)
             if num_wrong >= gate_threshold and not st.session_state.label_revealed:
                 render_label_locked(num_wrong, total)
             else:
