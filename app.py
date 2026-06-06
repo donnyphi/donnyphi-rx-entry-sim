@@ -946,19 +946,28 @@ html, body, .stApp                   { color-scheme: light; }
     gap: 16px;
 }
 
+.app-title-block .app-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #0f766e;
+    margin-bottom: 5px;
+}
+
 .app-title-block h1 {
-    font-size: 1.35rem;
-    font-weight: 600;
+    font-size: 1.5rem;
+    font-weight: 700;
     color: #111827;
     margin: 0;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
 }
 
 .app-title-block .subtitle {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     color: #6b7280;
-    margin-top: 3px;
+    margin-top: 4px;
 }
 
 .stat-chips {
@@ -981,7 +990,7 @@ html, body, .stApp                   { color-scheme: light; }
 }
 
 .chip-label { color: #6b7280; }
-.chip-value { font-weight: 600; color: #0f766e; }
+.chip-value { font-weight: 700; color: #0f766e; }
 .chip.missed .chip-value         { color: #b45309; }
 .chip.missed.empty .chip-value   { color: #4b5563; }
 .chip.accuracy-low .chip-value   { color: #b91c1c; }
@@ -1966,6 +1975,26 @@ span.see-example-link {
 .top-nav-divider {
     border-bottom: 1px solid #e5e7eb;
     margin: 4px 0 18px 0;
+}
+
+/* ---------- Training modules header (frames the nav as a curriculum) ---------- */
+.nav-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 2px 0 10px 0;
+}
+
+.nav-header .section-label {
+    margin-bottom: 0;
+}
+
+.nav-header-hint {
+    font-size: 0.8rem;
+    color: #6b7280;
+    line-height: 1.4;
 }
 
 /* ---------- Top navigation cards (3 large clickable buttons) ---------- */
@@ -3188,6 +3217,7 @@ def build_label_pdf(case: dict, feedback: dict) -> bytes:
 # =====================================================================
 
 def render_header() -> None:
+    # Field-level accuracy across every checked field this session.
     correct, total = overall_accuracy()
     if total:
         acc_pct = correct / total * 100
@@ -3197,28 +3227,44 @@ def render_header() -> None:
         acc_str = "—"
         acc_class = "chip"
 
-    review_count = len(st.session_state.review_queue)
-    missed_class = "chip missed" + ("" if review_count else " empty")
+    # Focus area: name the weakest field so the chip is actionable rather
+    # than a bare miss count. Falls back to "On track" once everything
+    # attempted is correct, and to a neutral dash before any practice.
+    stats = st.session_state.stats
+    weakest = tracker.weakest_field(stats)
+    acc_by_field = tracker.field_accuracy(stats)
+    if weakest is not None and acc_by_field.get(weakest, 1.0) < 1.0:
+        focus_value = FIELD_LABELS.get(weakest, weakest)
+        focus_class = "chip missed"
+    elif total:
+        focus_value = "On track"
+        focus_class = "chip"
+    else:
+        focus_value = "—"
+        focus_class = "chip missed empty"
+
+    cases_practiced = st.session_state.cases_completed
 
     st.markdown(
         f"""
         <div class="app-header">
             <div class="app-title-block">
+                <div class="app-eyebrow">Training workstation</div>
                 <h1>Rx Entry Simulator</h1>
                 <div class="subtitle">Pharmacy technician training tool</div>
             </div>
             <div class="stat-chips">
                 <span class="chip">
-                    <span class="chip-label">Completed</span>
-                    <span class="chip-value">{st.session_state.cases_completed}</span>
+                    <span class="chip-label">Cases practiced</span>
+                    <span class="chip-value">{cases_practiced}</span>
                 </span>
                 <span class="{acc_class}">
-                    <span class="chip-label">Accuracy</span>
+                    <span class="chip-label">Field accuracy</span>
                     <span class="chip-value">{acc_str}</span>
                 </span>
-                <span class="{missed_class}">
-                    <span class="chip-label">Missed fields</span>
-                    <span class="chip-value">{review_count}</span>
+                <span class="{focus_class}">
+                    <span class="chip-label">Focus area</span>
+                    <span class="chip-value">{html.escape(str(focus_value))}</span>
                 </span>
             </div>
         </div>
@@ -4209,33 +4255,46 @@ def render_top_nav() -> None:
     """Three large clickable nav cards across the top.
 
     Each card is a Streamlit button whose label uses markdown so the
-    title and description render as two visually distinct lines inside
+    module number, title, and description render as distinct lines inside
     one large click target. A hidden marker div before each button gives
     CSS a :has() hook to style the active card green and the inactive
-    cards white. Clicking a card sets session_state.active_section and
-    reruns.
+    cards white. A "Training modules" header above the row frames the
+    three as a curriculum (practiced in any order). Clicking a card sets
+    session_state.active_section and reruns.
     """
     nav_items = [
         ("Prescription Entry",
-         "Practice entering prescriptions and generating training labels."),
+         "Enter the seven Rx fields and translate SIG shorthand to plain English."),
         ("Drug Knowledge",
-         "Review medication basics, dosage forms, and LASA warnings."),
+         "Review brand and generic names, dosage forms, and LASA pairs."),
         ("Workflow Scenarios",
-         "Practice refill, allergy, DUR, and insurance decisions."),
+         "Decide on refill, allergy, DUR, and insurance situations."),
     ]
 
     active = st.session_state.get("active_section", "Prescription Entry")
+
+    # Curriculum framing: a labeled header so the row reads as training
+    # modules rather than browser tabs.
+    st.markdown(
+        '<div class="nav-header">'
+        '<span class="section-label">Training modules</span>'
+        '<span class="nav-header-hint">Pick a module &mdash; practice in any order.</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
     cols = st.columns(3, gap="small")
 
-    for col, (title, desc) in zip(cols, nav_items):
+    for idx, (col, (title, desc)) in enumerate(zip(cols, nav_items), start=1):
         with col:
             state_class = "nav-active" if title == active else "nav-inactive"
             st.markdown(
                 f'<div class="nav-marker {state_class}"></div>',
                 unsafe_allow_html=True,
             )
-            # Two-space-then-newline is markdown's hard line break; renders as <br>
-            label = f"**{title}**  \n{desc}"
+            # Two-space-then-newline is markdown's hard line break; renders as <br>.
+            # The zero-padded module index reads as a curriculum step.
+            label = f"**{idx:02d} · {title}**  \n{desc}"
             btn_key = f"nav_{title.lower().replace(' ', '_')}"
             if st.button(label, key=btn_key, use_container_width=True):
                 st.session_state.active_section = title
