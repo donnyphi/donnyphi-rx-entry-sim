@@ -90,6 +90,21 @@ VERB_INHALE = ["inhale", "use", "take"]
 VERB_INJECT = ["inject"]
 
 PRN_TERMS = ["as needed", "if needed", "when needed"]
+INDICATION_PAIN = ["for pain", "pain"]
+INDICATION_SHORTNESS_OF_BREATH = [
+    "for shortness of breath",
+    "shortness of breath",
+    "for wheezing",
+    "wheezing",
+]
+FOOD_OR_MEAL_TERMS = [
+    "with food",
+    "with meals",
+    "with a meal",
+    "with meal",
+    "after food",
+    "after meals",
+]
 
 
 # ---------- cases ----------
@@ -556,6 +571,7 @@ CASES: list[dict] = [
                 "route": ROUTE_PO,
                 "frequency": ["every 6 hours"],
                 "prn": ["as needed", "if needed", "when needed"],
+                "indication": INDICATION_PAIN,
             },
         },
         "extras": {
@@ -887,6 +903,7 @@ CASES: list[dict] = [
                 "form": FORM_TABLET,
                 "route": ROUTE_PO,
                 "frequency": FREQ_BID,
+                "food_or_meal": FOOD_OR_MEAL_TERMS,
             },
         },
         "extras": {
@@ -980,6 +997,7 @@ CASES: list[dict] = [
                 "form": FORM_TABLET,
                 "route": ROUTE_PO,
                 "frequency": FREQ_TID,
+                "food_or_meal": FOOD_OR_MEAL_TERMS,
             },
         },
         "extras": {
@@ -1028,6 +1046,7 @@ CASES: list[dict] = [
                 "route": ROUTE_PO,
                 "frequency": FREQ_Q6H,
                 "prn": PRN_TERMS,
+                "indication": INDICATION_PAIN,
             },
         },
         "extras": {
@@ -1357,6 +1376,7 @@ CASES: list[dict] = [
                 "route": ROUTE_INH,
                 "frequency": FREQ_Q6H,
                 "prn": PRN_TERMS,
+                "indication": INDICATION_SHORTNESS_OF_BREATH,
             },
         },
         "extras": {
