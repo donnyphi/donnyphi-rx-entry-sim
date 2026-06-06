@@ -26,11 +26,16 @@ def _norm(value: Any) -> str:
 
 
 def _parse_int(value: Any) -> int | None:
-    """Parse an int from user input. Returns None on failure."""
-    try:
-        return int(float(str(value).strip()))
-    except (ValueError, TypeError):
+    """Parse a whole-number input. Returns None on failure."""
+    if isinstance(value, bool):
         return None
+    if isinstance(value, int):
+        return value
+
+    text = str(value).strip()
+    if not re.fullmatch(r"\d+", text):
+        return None
+    return int(text)
 
 
 def _contains_phrase(text: str, phrase: str) -> bool:
@@ -134,7 +139,6 @@ def check_days_supply(
 
 
 def check_refills(user: Any, expected: int) -> dict[str, Any]:
-    return _check_int_field(user, expected, "Refills")
     result = _check_int_field(user, expected, "Refills")
     if not result["correct"]:
         base = result["explanation"] or f"Expected {expected}."
@@ -181,7 +185,8 @@ def check_sig(
             "Your SIG is missing: "
             + "; ".join(parts)
             + ". A complete SIG includes a verb, quantity, dosage form, "
-            "route, frequency, and a duration when one is specified."
+            "route, frequency, duration, PRN indication, and food or meal "
+            "instructions when specified."
         )
 
     return {
