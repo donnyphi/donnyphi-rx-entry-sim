@@ -60,6 +60,11 @@ What the checks cover today:
 If you add a case, scenario, or rule, run `python run_checks.py` and confirm it
 still exits `0` before opening or merging a PR.
 
+When you open a PR, GitHub pre-fills the repository template
+(`.github/pull_request_template.md`). Complete it — it records what changed,
+what did **not** change (protected logic/data), how it was verified, and the
+risk/rollback — so every change gets an explicit review before it is merged.
+
 ## Author
 
 Donny Nguyen

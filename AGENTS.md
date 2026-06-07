@@ -305,3 +305,5 @@ add a component, give it a real class in `CUSTOM_CSS` and follow the token table
 - [ ] Training-only / fictional disclaimers preserved anywhere a label or fill is shown.
 - [ ] Ran `python run_checks.py` and all tests pass (exit `0`) before merging — see
       "Verifying changes" in `README.md`.
+- [ ] Completed the PR template (`.github/pull_request_template.md`): what changed, what
+      did not change (protected logic/data), verification, risk, and rollback.
