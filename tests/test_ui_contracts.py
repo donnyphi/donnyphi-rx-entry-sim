@@ -35,5 +35,14 @@ class LabelPreviewUiContractTest(unittest.TestCase):
         self.fail("Download Label PDF button was not found.")
 
 
+class ResponsiveCssContractTest(unittest.TestCase):
+    def test_mobile_css_keeps_streamlit_columns_readable(self):
+        app_source = Path("app.py").read_text(encoding="utf-8")
+
+        self.assertIn("@media (max-width: 760px)", app_source)
+        self.assertIn('[data-testid="stHorizontalBlock"] > [data-testid="column"]', app_source)
+        self.assertIn("min-height: 44px", app_source)
+
+
 if __name__ == "__main__":
     unittest.main()
