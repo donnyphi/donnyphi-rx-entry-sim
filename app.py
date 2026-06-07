@@ -2339,6 +2339,212 @@ span.see-example-link {
     font-size: 0.82rem;
 }
 
+/* ---------- Responsive layout: phone-sized screens ---------- */
+@media (max-width: 760px) {
+    .block-container {
+        padding-top: 0.75rem;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        padding-bottom: 1.5rem;
+    }
+
+    [data-testid="stHorizontalBlock"] {
+        gap: 8px;
+    }
+
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
+    .app-header {
+        padding: 14px 16px;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .app-title-block,
+    .stat-chips {
+        width: 100%;
+    }
+
+    .app-title-block h1 {
+        font-size: 1.32rem;
+        letter-spacing: 0;
+    }
+
+    .stat-chips {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .chip {
+        width: 100%;
+        justify-content: space-between;
+        border-radius: 6px;
+        padding: 7px 10px;
+    }
+
+    .section-card,
+    [data-testid="stVerticalBlock"]:has(.card-border-anchor):not(:has([data-testid="stVerticalBlock"] .card-border-anchor)) {
+        padding: 14px 16px !important;
+    }
+
+    .rx-header-row,
+    .label-pharmacy-row,
+    .label-patient-row,
+    .scenario-progress-row,
+    .report-score,
+    .feedback-item .field-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .rx-drug,
+    .label-drug-line,
+    .label-sig-block,
+    .feedback-detail,
+    .feedback-explanation,
+    .scenario-situation,
+    .scenario-feedback-body,
+    .drug-info-body {
+        overflow-wrap: anywhere;
+    }
+
+    .rx-sig {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    .rx-tags {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .rx-tag,
+    .rx-tag:first-child {
+        padding: 0;
+    }
+
+    .rx-tag + .rx-tag {
+        border-left: none;
+        border-top: 1px solid #f3f4f6;
+        padding-top: 8px;
+    }
+
+    .data-row,
+    .missed-row,
+    .sig-pair {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .data-row .label,
+    .missed-row .case-id,
+    .missed-row .field,
+    .sig-abbr {
+        min-width: 0;
+    }
+
+    .stButton > button,
+    .stDownloadButton > button {
+        width: 100%;
+        min-height: 44px;
+        white-space: normal;
+    }
+
+    [data-testid="stElementContainer"]:has(.nav-marker) + [data-testid="stElementContainer"] .stButton > button,
+    .element-container:has(.nav-marker) + .element-container .stButton > button {
+        min-height: 74px !important;
+        padding: 13px 14px !important;
+        text-align: left !important;
+    }
+
+    [data-testid="stElementContainer"]:has(.nav-marker) + [data-testid="stElementContainer"] .stButton > button strong,
+    .element-container:has(.nav-marker) + .element-container .stButton > button strong {
+        font-size: 0.98rem !important;
+        line-height: 1.35 !important;
+    }
+
+    .nav-header {
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .nav-header-hint {
+        width: 100%;
+    }
+
+    .feedback-detail .answer-box {
+        display: block;
+        width: 100%;
+        margin: 5px 0 8px 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .print-page-mockup {
+        padding: 14px 10px;
+        max-width: 100%;
+        box-shadow: none;
+    }
+
+    .label-paper {
+        padding: 16px 14px;
+        max-width: 100%;
+    }
+
+    .label-fill-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .drug-category-bar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .scenario-score {
+        border-radius: 6px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .block-container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .app-header,
+    .section-card,
+    [data-testid="stVerticalBlock"]:has(.card-border-anchor):not(:has([data-testid="stVerticalBlock"] .card-border-anchor)) {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    .section-label,
+    .form-group-label,
+    .rx-group-label,
+    .rx-mini-label {
+        letter-spacing: 0.06em;
+    }
+
+    .label-drug-line {
+        font-size: 1rem;
+    }
+
+    .label-sig-block {
+        font-size: 0.96rem;
+    }
+}
+
 </style>
 """
 
