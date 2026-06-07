@@ -4261,7 +4261,7 @@ def render_label_preview(case: dict, feedback: dict) -> None:
                     data=pdf_bytes,
                     file_name=f"training_label_{case['case_id']}.pdf",
                     mime="application/pdf",
-                    type="primary",
+                    type="secondary",
                     key=f"download_label_pdf_{case['case_id']}",
                     use_container_width=True,
                 )
