@@ -303,3 +303,5 @@ add a component, give it a real class in `CUSTOM_CSS` and follow the token table
       task explicitly calls for it).
 - [ ] CSS lives in `CUSTOM_CSS`; validation stays in `checker.py`; case data in `cases.py`.
 - [ ] Training-only / fictional disclaimers preserved anywhere a label or fill is shown.
+- [ ] Ran `python run_checks.py` and all tests pass (exit `0`) before merging — see
+      "Verifying changes" in `README.md`.
