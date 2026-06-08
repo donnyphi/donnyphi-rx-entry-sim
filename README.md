@@ -31,39 +31,6 @@ Built for my pharm-tech cohort ahead of the June certification exam.
 - GitHub
 - Streamlit Community Cloud
 
-## Verifying changes (run before merging)
-
-This project ships a lightweight automated check suite (field validation,
-case self-validation, and UI contract checks). **Run it before merging any
-change** — including AI-generated changes — and only merge when it passes.
-
-```bash
-python run_checks.py
-```
-
-`run_checks.py` runs every test in `tests/` using only the Python standard
-library (no extra install needed) and **exits non-zero if any test fails**, so
-it works as a merge gate locally or in CI. Equivalent direct command:
-
-```bash
-python -m unittest discover -s tests
-```
-
-What the checks cover today:
-
-- `tests/test_checker.py` — numeric fields reject non-whole-number input, SIG
-  validation requires the expected components, and every prescription case in
-  `cases.py` self-validates against `checker.py`.
-- `tests/test_ui_contracts.py` — UI contracts parsed from `app.py` (e.g. the
-  Download Label PDF button stays a secondary action; mobile CSS is present).
-
-If you add a case, scenario, or rule, run `python run_checks.py` and confirm it
-still exits `0` before opening or merging a PR.
-
-When you open a PR, GitHub pre-fills the repository template
-(`.github/pull_request_template.md`). Complete it — it records what changed,
-what did **not** change (protected logic/data), how it was verified, and the
-risk/rollback — so every change gets an explicit review before it is merged.
 
 ## Author
 
